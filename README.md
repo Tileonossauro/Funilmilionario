@@ -128,6 +128,12 @@ ninguém entender por quê.
 bastando declarar a linha como sua. As tabelas filhas exigem posse do funil, e as conexões
 exigem que as duas pontas morem nele.
 
+## Colocar no ar
+
+Ver [DEPLOY.md](./DEPLOY.md). Resumo: o app precisa de Node rodando no servidor
+(hospedagem compartilhada de PHP não serve), e o domínio pode continuar onde está
+— basta apontar o DNS.
+
 ## Próximos passos
 
 Ver `PLAN.md`. A visão completa (agente Claude conversacional, MCP, templates,
