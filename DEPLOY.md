@@ -57,6 +57,30 @@ Atalho: procure "Node.js" no hPanel. Se a opção não existir, é compartilhada
 
 5. **Deploy.** Sai uma URL tipo `funilmilionario-algo.vercel.app`.
 
+> **Config ou Secret?** A Vercel pergunta o tipo de cada variável e recusa
+> salvar uma variável `NEXT_PUBLIC_*` como Secret — com razão. A regra:
+>
+> | Variável | Tipo | Vai ao navegador? |
+> |---|---|---|
+> | `NEXT_PUBLIC_SUPABASE_URL` | **Config** | sim, por desenho |
+> | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | **Config** | sim, por desenho |
+> | `ANTHROPIC_API_KEY` | **Secret** | nunca |
+>
+> A URL e a anon key do Supabase são públicas de propósito: é com elas que o
+> navegador fala com o banco. Quem protege os dados é a RLS, não o sigilo
+> dessas duas. Já a chave da Anthropic não pode sair do servidor — por isso a
+> leitura de print vive numa rota de API, e por isso ela nunca leva o prefixo
+> `NEXT_PUBLIC_`.
+>
+> Variável salva como Secret não pode virar Config depois. Se errar o tipo,
+> apague e recrie.
+
+> **Onde fica o Redeploy.** Aba **Deployments** → no deploy mais recente, o
+> botão **⋯** na ponta direita da linha → **Redeploy**. Variáveis de ambiente
+> adicionadas depois de um deploy só valem a partir do build seguinte, então
+> esse passo não é opcional. Um push novo no repositório também dispara deploy
+> e resolve igual.
+
 > **Região (opcional, depois que estiver no ar).** O banco Supabase está em
 > São Paulo. Por padrão as funções da Vercel rodam nos EUA, então cada consulta
 > atravessa o continente — abrir um funil faz várias consultas e a lentidão
