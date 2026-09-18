@@ -17,6 +17,12 @@ com tarefas automáticas. Em vez de digitar os números, jogue o print — a IA 
   (CTR, conversão, CPL, CAC, ticket) calculadas — nunca digitadas.
 - **Tarefas automáticas**: adicionou Landing Page, nasce "Conferir dados da LP" em D+3.
   Meta Ads gera "Revisar investimento e CPL" em D+1. Cada tipo tem sua regra.
+- **Projeção (Simular)**: informe tráfego e investimento e o canvas mostra quantas pessoas
+  chegam em cada etapa, quanta receita sai no fim, CAC, ROAS e lucro. As taxas **começam nos
+  seus números reais** — se a sua LP converte 18,4% de verdade, a projeção parte daí. Onde o
+  sistema precisou adivinhar, ele marca com traço pontilhado e avisa.
+- **Etapa de Oferta**: separada da página de vendas. A página é onde a pessoa passa; a oferta
+  é o que ela compra e por quanto. Order bump e upsell no mesmo funil, cada um com seu preço.
 - **Leitura de print**: arrasta o screenshot do Instagram Insights / Gerenciador de
   Anúncios / Analytics no painel da etapa e os números chegam preenchidos, com selo de
   confiança por campo, para você conferir antes de salvar.
@@ -108,6 +114,14 @@ Usar zero para dizer "não achei" faz o histórico mentir.
 leads; `whatsapp` entra por conversas e sai por ativações. É esse par que permite calcular
 a conversão da etapa e a taxa de passagem entre etapas sem heurística — o mesmo número
 significaria coisas diferentes em cada etapa se fosse genérico.
+
+**Projeção e realidade nunca aparecem juntas no mesmo card.** Ligou Simular, o card mostra o
+projetado; desligou, mostra o real. Número hipotético ao lado de número medido é como alguém
+apresenta projeção achando que é resultado.
+
+**Taxa em branco na projeção significa "usa meu histórico", não zero.** O placeholder mostra
+a taxa real da etapa. Campo vazio virando zero silenciosamente derruba a projeção inteira sem
+ninguém entender por quê.
 
 **RLS checa o dono do funil, não só o dono da linha.** Policy que valida apenas
 `owner_id = auth.uid()` na própria linha deixa qualquer um inserir etapas no funil alheio,

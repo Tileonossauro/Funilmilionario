@@ -122,6 +122,12 @@ const PATHS: Record<string, React.ReactNode> = {
       <path d="M10.5 18.5h3" />
     </>
   ),
+  etiqueta: (
+    <>
+      <path d="M3.5 11.2V4.5a1 1 0 0 1 1-1h6.7a2 2 0 0 1 1.4.6l7 7a2 2 0 0 1 0 2.8l-5.7 5.7a2 2 0 0 1-2.8 0l-7-7a2 2 0 0 1-.6-1.4Z" />
+      <circle cx="7.8" cy="7.8" r="1.3" />
+    </>
+  ),
   condicao: (
     <>
       <path d="M12 3 21 12l-9 9-9-9Z" />

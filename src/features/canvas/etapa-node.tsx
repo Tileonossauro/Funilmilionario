@@ -14,6 +14,9 @@ export interface EtapaNodeData extends Record<string, unknown> {
   ultimoLancamento?: Record<string, number>
   ultimoLancamentoEm?: string
   rev: number
+  /** Preenchido só no modo simulação — substitui os números reais no card. */
+  projecao?: { entrada: number; saida: number; taxa: number; receita: number; estimada: boolean }
+  ehEntrada?: boolean
 }
 
 /**
@@ -60,8 +63,16 @@ function EtapaNodeImpl({ data, selected }: NodeProps) {
   const estilo = ESTILO_FAMILIA[def.family] ?? ESTILO_FAMILIA.outros!
 
   const valores = (d.ultimoLancamento ?? {}) as Partial<Record<MetricKey, number>>
-  const { entrada, saida, conversao } = volumesDaEtapa(d.etapaTipo, valores)
-  const temNumeros = Object.keys(valores).length > 0
+  const real = volumesDaEtapa(d.etapaTipo, valores)
+  const proj = d.projecao
+
+  // No modo simulação o card mostra o projetado no lugar do real, nunca os dois
+  // juntos: número real e número hipotético lado a lado é como alguém apresenta
+  // projeção achando que é resultado.
+  const entrada = proj ? proj.entrada : real.entrada
+  const saida = proj ? proj.saida : real.saida
+  const conversao = proj ? proj.taxa : real.conversao
+  const temNumeros = proj ? true : Object.keys(valores).length > 0
 
   return (
     <div
@@ -71,6 +82,7 @@ function EtapaNodeImpl({ data, selected }: NodeProps) {
         selected
           ? 'border-[var(--accent)] shadow-[0_0_0_3px_var(--accent-soft)]'
           : 'shadow-sm hover:border-[var(--text-muted)]',
+        d.ehEntrada && !selected && 'border-[var(--accent)]',
       )}
     >
       <Handle type="target" position={Position.Top} />
@@ -91,16 +103,30 @@ function EtapaNodeImpl({ data, selected }: NodeProps) {
       </div>
 
       {temNumeros ? (
-        <div className="border-t px-3 py-2">
+        <div className={cn('border-t px-3 py-2', proj && 'bg-[var(--accent-soft)]/50')}>
           <div className="flex items-center justify-between gap-2">
             <Volume valor={entrada} chave={def.volumeIn} />
             {conversao !== undefined ? (
-              <span className="shrink-0 rounded-md bg-[var(--surface-2)] px-1.5 py-0.5 text-[10px] font-semibold tabular-nums">
+              <span
+                title={proj?.estimada ? 'Taxa estimada — não veio de número seu' : undefined}
+                className={cn(
+                  'shrink-0 rounded-md px-1.5 py-0.5 text-[10px] font-semibold tabular-nums',
+                  proj?.estimada
+                    ? 'bg-[var(--surface-2)] text-[var(--text-muted)] ring-1 ring-dashed ring-[var(--text-muted)]/40'
+                    : 'bg-[var(--surface-2)]',
+                )}
+              >
                 {formatMetric(conversao, 'percentual')}
               </span>
             ) : null}
             <Volume valor={saida} chave={def.volumeOut} alinharDireita />
           </div>
+
+          {proj && proj.receita > 0 ? (
+            <p className="mt-1.5 border-t pt-1.5 text-right text-[11px] font-semibold tabular-nums text-[var(--accent)]">
+              {formatMetric(proj.receita, 'moeda')}
+            </p>
+          ) : null}
         </div>
       ) : def.metrics.length > 0 ? (
         <div className="border-t px-3 py-1.5">
@@ -146,5 +172,13 @@ function Volume({
 export const EtapaNode = memo(EtapaNodeImpl, (prev, next) => {
   const a = prev.data as EtapaNodeData
   const b = next.data as EtapaNodeData
-  return a.rev === b.rev && prev.selected === next.selected && a.label === b.label
+  return (
+    a.rev === b.rev &&
+    prev.selected === next.selected &&
+    a.label === b.label &&
+    a.ehEntrada === b.ehEntrada &&
+    a.projecao?.entrada === b.projecao?.entrada &&
+    a.projecao?.saida === b.projecao?.saida &&
+    a.projecao?.receita === b.projecao?.receita
+  )
 })

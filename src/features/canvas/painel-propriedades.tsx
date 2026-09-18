@@ -10,6 +10,7 @@ import { atualizarNode, excluirNode, historicoDaEtapa, criarTarefa } from '@/app
 import { Button, Input, Field, Textarea, Label } from '@/components/ui/primitives'
 import { LancamentoForm } from '@/features/canvas/lancamento-form'
 import { addDays } from '@/domain/tasks/rules'
+import { cn } from '@/lib/cn'
 
 type Aba = 'detalhes' | 'numeros'
 
@@ -23,6 +24,7 @@ interface Historico {
 
 export function PainelPropriedades({ funnelId }: { funnelId: string }) {
   const selecionado = useCanvasStore((s) => s.selecionado)
+  const simulacao = useCanvasStore((s) => s.simulacao)
   const node = useCanvasStore((s) => s.nodes.find((n) => n.id === s.selecionado))
   const patchNode = useCanvasStore((s) => s.patchNode)
   const removeNode = useCanvasStore((s) => s.removeNode)
@@ -71,6 +73,7 @@ export function PainelPropriedades({ funnelId }: { funnelId: string }) {
           observacoes: atual.observacoes,
           ultimoLancamento: atual.ultimoLancamento,
           ultimoLancamentoEm: atual.ultimoLancamentoEm,
+          preco: atual.preco,
           rev: atual.rev,
         },
       })
@@ -146,6 +149,26 @@ export function PainelPropriedades({ funnelId }: { funnelId: string }) {
                 onBlur={(e) => salvar({ observacoes: e.target.value })}
               />
             </Field>
+
+            {def.temPreco ? (
+              <Field label="Preço unitário (R$)">
+                <Input
+                  inputMode="decimal"
+                  value={node.preco === undefined ? '' : String(node.preco)}
+                  placeholder="29,90"
+                  onChange={(e) => {
+                    const texto = e.target.value.replace(',', '.')
+                    const numero = Number(texto)
+                    patchNode(node.id, {
+                      preco: texto === '' || !Number.isFinite(numero) ? undefined : numero,
+                    })
+                  }}
+                  onBlur={() => salvar({})}
+                />
+              </Field>
+            ) : null}
+
+            {simulacao.ativa ? <TaxaProjetada nodeId={node.id} /> : null}
 
             <NovaTarefa funnelId={funnelId} nodeId={node.id} nodeLabel={node.label} />
 
@@ -343,6 +366,58 @@ function NovaTarefa({
           Cancelar
         </Button>
       </div>
+    </div>
+  )
+}
+
+
+/**
+ * Ajuste da taxa usada na projeção. O placeholder mostra o número real, então
+ * fica explícito que deixar em branco NÃO significa zero — significa "usa o meu
+ * histórico". Campo vazio que vira zero silenciosamente é como uma projeção
+ * inteira despenca sem ninguém entender por quê.
+ */
+function TaxaProjetada({ nodeId }: { nodeId: string }) {
+  const node = useCanvasStore((s) => s.nodes.find((n) => n.id === nodeId))
+  const taxaManual = useCanvasStore((s) => s.simulacao.taxasNode[nodeId])
+  const setTaxaNode = useCanvasStore((s) => s.setTaxaNode)
+
+  if (!node) return null
+
+  const real = volumesDaEtapa(node.type, node.ultimoLancamento ?? {}).conversao
+  const def = getNodeType(node.type)
+  if (def.volumeIn === def.volumeOut) return null
+
+  return (
+    <div className="rounded-lg border border-[var(--accent)]/30 bg-[var(--accent-soft)]/40 p-3">
+      <Label>Taxa na projeção (%)</Label>
+      <div className="flex items-center gap-1.5">
+        <Input
+          inputMode="decimal"
+          value={taxaManual === undefined ? '' : String(Math.round(taxaManual * 1000) / 10)}
+          placeholder={real !== undefined ? String(Math.round(real * 1000) / 10) : '—'}
+          onChange={(e) => {
+            const texto = e.target.value.replace(',', '.')
+            if (texto === '') {
+              setTaxaNode(nodeId, null)
+              return
+            }
+            const numero = Number(texto)
+            if (Number.isFinite(numero)) setTaxaNode(nodeId, Math.max(0, Math.min(numero, 100)) / 100)
+          }}
+          className="h-8 text-xs tabular-nums"
+        />
+        {taxaManual !== undefined ? (
+          <Button size="sm" variant="ghost" onClick={() => setTaxaNode(nodeId, null)}>
+            Limpar
+          </Button>
+        ) : null}
+      </div>
+      <p className={cn('mt-1.5 text-[10px] leading-relaxed text-[var(--text-muted)]')}>
+        {real !== undefined
+          ? 'Em branco usa a sua taxa real desta etapa.'
+          : 'Sem número real ainda — em branco a projeção assume 100%.'}
+      </p>
     </div>
   )
 }

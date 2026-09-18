@@ -15,7 +15,12 @@ import {
   type NodeChange,
   type EdgeChange,
 } from '@xyflow/react'
-import { useCanvasStore, type CanvasNode, type CanvasEdge } from '@/features/canvas/store'
+import {
+  useCanvasStore,
+  calcularSimulacao,
+  type CanvasNode,
+  type CanvasEdge,
+} from '@/features/canvas/store'
 import { EtapaNode } from '@/features/canvas/etapa-node'
 import { EtapaEdge } from '@/features/canvas/etapa-edge'
 import { taxaDePassagem } from '@/domain/funnel/fluxo'
@@ -56,25 +61,45 @@ function CanvasInterno({ funnelId }: { funnelId: string }) {
   const removeEdge = useCanvasStore((s) => s.removeEdge)
   const setSaveState = useCanvasStore((s) => s.setSaveState)
   const avisar = useCanvasStore((s) => s.avisar)
+  const simulacao = useCanvasStore((s) => s.simulacao)
+
+  const projecao = useMemo(
+    () => calcularSimulacao(nodes, edges, simulacao),
+    [nodes, edges, simulacao],
+  )
 
   useEffect(() => setPronto(true), [])
 
   const rfNodes = useMemo<Node[]>(
     () =>
-      nodes.map((n) => ({
-        id: n.id,
-        type: 'etapa',
-        position: n.position,
-        selected: n.id === selecionado,
-        data: {
-          label: n.label,
-          etapaTipo: n.type,
-          ultimoLancamento: n.ultimoLancamento,
-          ultimoLancamentoEm: n.ultimoLancamentoEm,
-          rev: n.rev,
-        },
-      })),
-    [nodes, selecionado],
+      nodes.map((n) => {
+        const fluxo = projecao?.porNode[n.id]
+
+        return {
+          id: n.id,
+          type: 'etapa',
+          position: n.position,
+          selected: n.id === selecionado,
+          data: {
+            label: n.label,
+            etapaTipo: n.type,
+            ultimoLancamento: n.ultimoLancamento,
+            ultimoLancamentoEm: n.ultimoLancamentoEm,
+            rev: n.rev,
+            ehEntrada: simulacao.ativa && simulacao.entryNodeId === n.id,
+            projecao: fluxo
+              ? {
+                  entrada: fluxo.entrada,
+                  saida: fluxo.saida,
+                  taxa: fluxo.taxa,
+                  receita: fluxo.receita,
+                  estimada: fluxo.taxaEstimada,
+                }
+              : undefined,
+          },
+        }
+      }),
+    [nodes, selecionado, projecao, simulacao.ativa, simulacao.entryNodeId],
   )
 
   // A taxa de passagem depende dos números das DUAS pontas, então é calculada
@@ -94,16 +119,23 @@ function CanvasInterno({ funnelId }: { funnelId: string }) {
             )
           : undefined
 
+      const proj = projecao?.porEdge[e.id]
+
       return {
         id: e.id,
         source: e.source,
         target: e.target,
         type: 'etapa',
-        data: { label: e.label || undefined, taxa },
+        data: {
+          label: e.label || undefined,
+          taxa: proj ? proj.taxa : taxa,
+          fluxo: proj?.fluxo,
+          estimada: proj?.taxaEstimada,
+        },
         markerEnd: { type: 'arrowclosed' as const },
       }
     })
-  }, [edges, nodes])
+  }, [edges, nodes, projecao])
 
   /** Só o fim do arraste vai ao banco — durante o drag seria uma escrita por frame. */
   const onNodesChange = useCallback(

@@ -170,6 +170,31 @@ export async function excluirEdge(id: string): Promise<ActionResult> {
   return error ? { ok: false, erro: error.message } : { ok: true }
 }
 
+const simulacaoSchema = z.object({
+  ativa: z.boolean(),
+  entryNodeId: z.string().uuid().nullable(),
+  volume: z.number().nonnegative().max(1_000_000_000),
+  investimento: z.number().nonnegative().max(1_000_000_000),
+  taxasNode: z.record(z.string().uuid(), z.number().min(0).max(1)),
+  taxasEdge: z.record(z.string().uuid(), z.number().min(0).max(1)),
+})
+
+export async function salvarSimulacao(
+  funnelId: string,
+  simulacao: unknown,
+): Promise<ActionResult> {
+  const { supabase } = await ctx()
+  const parsed = simulacaoSchema.safeParse(simulacao)
+  if (!parsed.success) return { ok: false, erro: 'Cenário inválido.' }
+
+  const { error } = await supabase
+    .from('funnels')
+    .update({ simulacao: parsed.data })
+    .eq('id', funnelId)
+
+  return error ? { ok: false, erro: error.message } : { ok: true }
+}
+
 export async function salvarViewport(
   funnelId: string,
   viewport: { x: number; y: number; zoom: number },

@@ -38,6 +38,7 @@ export default async function FunilPage({ params }: { params: Promise<{ id: stri
         observacoes: data.observacoes ? String(data.observacoes) : undefined,
         ultimoLancamento: (data.ultimoLancamento as Record<string, number> | undefined) ?? undefined,
         ultimoLancamentoEm: data.ultimoLancamentoEm ? String(data.ultimoLancamentoEm) : undefined,
+        preco: typeof data.preco === 'number' ? data.preco : undefined,
         rev: Number(data.rev ?? 0),
       },
     ]
@@ -50,5 +51,12 @@ export default async function FunilPage({ params }: { params: Promise<{ id: stri
     label: String((row.data as Record<string, unknown>).label ?? ''),
   }))
 
-  return <EditorFunil funil={{ id: funil.id, nome: funil.nome }} nodes={nodes} edges={edges} />
+  return (
+    <EditorFunil
+      funil={{ id: funil.id, nome: funil.nome }}
+      nodes={nodes}
+      edges={edges}
+      simulacao={funil.simulacao}
+    />
+  )
 }

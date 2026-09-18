@@ -40,6 +40,8 @@ export interface NodeTypeDef {
    */
   volumeIn?: MetricKey
   volumeOut?: MetricKey
+  /** Etapa onde o dinheiro entra: ganha campo de preço e alimenta a projeção. */
+  temPreco?: boolean
   /** Tarefa de acompanhamento disparada na criação. Ausente = não cria tarefa. */
   taskRule?: TaskRule
   /** Etapa de fim de jornada: não ter saída é legítimo. */
@@ -126,13 +128,13 @@ export const NODE_TYPES = {
   pagina_vendas: {
     family: 'pagina', label: 'Página de vendas', icon: 'pagina',
     metrics: ['visitantes', 'vendas', 'receita'],
-    volumeIn: 'visitantes', volumeOut: 'vendas',
+    volumeIn: 'visitantes', volumeOut: 'vendas', temPreco: true,
     taskRule: { titulo: 'Conferir conversão da página de vendas', prazoDias: 3 },
   },
   checkout: {
     family: 'pagina', label: 'Checkout', icon: 'carrinho',
     metrics: ['visitantes', 'vendas', 'receita'],
-    volumeIn: 'visitantes', volumeOut: 'vendas',
+    volumeIn: 'visitantes', volumeOut: 'vendas', temPreco: true,
     taskRule: { titulo: 'Conferir abandono de checkout', prazoDias: 3 },
   },
   formulario: {
@@ -184,7 +186,7 @@ export const NODE_TYPES = {
   assinatura: {
     family: 'produto', label: 'Assinatura', icon: 'estrela',
     metrics: ['vendas', 'receita'],
-    volumeIn: 'vendas', volumeOut: 'vendas',
+    volumeIn: 'vendas', volumeOut: 'vendas', temPreco: true,
     terminal: true,
     taskRule: { titulo: 'Conferir assinaturas e receita', prazoDias: 7 },
   },
@@ -192,6 +194,19 @@ export const NODE_TYPES = {
     family: 'produto', label: 'Aplicativo', icon: 'celular',
     metrics: ['ativacoes', 'vendas'],
     volumeIn: 'ativacoes', volumeOut: 'vendas',
+  },
+
+  /**
+   * A etapa de oferta existe separada da página de vendas de propósito: a página
+   * é onde a pessoa passa, a oferta é o que ela compra e por quanto. Separar
+   * deixa o cálculo de receita direto e permite order bump / upsell no mesmo
+   * funil, cada um com seu preço.
+   */
+  oferta: {
+    family: 'produto', label: 'Oferta', icon: 'etiqueta',
+    metrics: ['vendas', 'receita'],
+    volumeIn: 'vendas', volumeOut: 'vendas', temPreco: true,
+    taskRule: { titulo: 'Conferir vendas e receita da oferta', prazoDias: 7 },
   },
 
   // ── Outros ────────────────────────────────────────────────────────────────
@@ -207,8 +222,19 @@ export function isNodeType(value: string): value is NodeType {
   return value in NODE_TYPES
 }
 
-export function getNodeType(type: NodeType): NodeTypeDef {
-  return NODE_TYPES[type]
+const FALLBACK: NodeTypeDef = {
+  family: 'outros',
+  label: 'Etapa',
+  icon: 'condicao',
+  metrics: [],
+}
+
+/**
+ * Tipo desconhecido (import antigo, dado torto no banco) devolve um fallback
+ * em vez de undefined. Um tipo fora da taxonomia não pode derrubar o canvas.
+ */
+export function getNodeType(type: NodeType | string): NodeTypeDef {
+  return (NODE_TYPES as Record<string, NodeTypeDef>)[type] ?? FALLBACK
 }
 
 export function typesByFamily(family: Family): NodeType[] {

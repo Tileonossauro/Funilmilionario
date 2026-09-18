@@ -28,7 +28,6 @@ Nada além disso entra agora.
 | Geração de funil por IA, ChangeSet, preview | Você quer montar o funil você mesmo. Gerar sozinho é feature de vendedor, não sua dor. |
 | Workspaces, projetos, times, permissões | Uma conta, seus funis. Hierarquia entra quando existir segunda pessoa usando. |
 | Templates, apresentação, export PNG/PDF, compartilhamento, comentários, versionamento | Nenhum desses te ajuda a *construir* ou *acompanhar*. Ficam para depois. |
-| Funnel Math / simulação | Simular é hipótese. Você quer o número real. Os dados reais vêm primeiro. |
 | Lint determinístico (15 regras) | Fica 1 regra: etapa sem saída. O resto é ruído enquanto o funil é pequeno. |
 
 Sobrou o que responde a: **dá pra montar, dá pra acompanhar, dá pra lançar sem digitar.**
@@ -49,13 +48,16 @@ para pedir. São coisas diferentes e as duas estão certas.
 
 ## Referência visual
 
-Funnelytics, sem copiar. O que vale de lá é conceitual e são três coisas:
+Funnelytics, sem copiar. O que vale de lá é conceitual e são quatro coisas:
 
 1. **Forma antes de texto** — cada família de etapa tem silhueta própria (tráfego é pílula,
    página tem cara de janela, lógica é losango), então o funil se lê com o zoom afastado.
 2. **Número na conexão, não só no bloco** — a linha entre duas etapas carrega a taxa de
    passagem. É ali que o vazamento aparece.
 3. **Ícone forte, texto curto** — o bloco identifica a etapa em um relance.
+4. **Projetar antes de gastar** — essa eu tinha deixado de fora e é a melhor ideia deles.
+   Entrou como modo **Simular**, com uma diferença nossa: as taxas partem do histórico real
+   em vez de campo vazio, então a projeção nasce ancorada no que já aconteceu.
 
 O resto do produto é nosso: o modelo de dados, as regras de tarefa e a leitura de print
 não têm equivalente lá.

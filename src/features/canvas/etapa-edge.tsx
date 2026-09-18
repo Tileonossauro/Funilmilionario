@@ -9,6 +9,9 @@ export interface EtapaEdgeData extends Record<string, unknown> {
   label?: string
   /** Taxa de passagem entre as duas etapas, já calculada no canvas. */
   taxa?: number
+  /** Modo simulação: quantas pessoas passam por aqui na projeção. */
+  fluxo?: number
+  estimada?: boolean
 }
 
 /**
@@ -46,18 +49,41 @@ function EtapaEdgeImpl({
   const d = (data ?? {}) as EtapaEdgeData
   const temRotulo = Boolean(d.label)
   const temTaxa = typeof d.taxa === 'number'
+  const temFluxo = typeof d.fluxo === 'number'
 
   return (
     <>
       <BaseEdge path={path} markerEnd={markerEnd} />
 
-      {temRotulo || temTaxa ? (
+      {temRotulo || temTaxa || temFluxo ? (
         <EdgeLabelRenderer>
           <div
             style={{ transform: `translate(-50%, -50%) translate(${labelX}px, ${labelY}px)` }}
             className="pointer-events-none absolute flex items-center gap-1"
           >
-            {temTaxa ? (
+            {temFluxo ? (
+              <span
+                title={
+                  d.estimada
+                    ? 'Divisão estimada — defina a taxa desta saída no painel'
+                    : 'Pessoas passando por aqui na projeção'
+                }
+                className={cn(
+                  'rounded-md border bg-[var(--surface)] px-1.5 py-0.5',
+                  'text-[10px] font-semibold tabular-nums shadow-sm',
+                  d.estimada
+                    ? 'border-dashed text-[var(--text-muted)]'
+                    : 'border-[var(--accent)]/40 text-[var(--accent)]',
+                )}
+              >
+                {formatMetric(d.fluxo!, 'inteiro')}
+                {d.taxa !== undefined ? (
+                  <span className="ml-1 font-normal opacity-70">
+                    {formatMetric(d.taxa, 'percentual')}
+                  </span>
+                ) : null}
+              </span>
+            ) : temTaxa ? (
               <span
                 title="Quantos passaram desta etapa para a próxima"
                 className={cn(

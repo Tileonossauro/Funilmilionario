@@ -12,6 +12,7 @@ export type FunnelRow = {
   descricao: string | null
   status: FunnelStatus
   viewport: { x: number; y: number; zoom: number }
+  simulacao: Record<string, unknown> | null
   node_count: number
   created_at: string
   updated_at: string
