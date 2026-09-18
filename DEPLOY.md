@@ -37,38 +37,58 @@ Atalho: procure "Node.js" no hPanel. Se a opção não existir, é compartilhada
 
 ---
 
-## Caminho A — o app roda fora, o domínio continua na Hostinger
-
-Use este se a sua hospedagem for compartilhada.
-
-O app roda na Vercel (grátis no plano Hobby, feita pelo time do Next.js) e o subdomínio
-`funilmilionario.voltaregestao.com.br` aponta pra lá. O domínio continua seu, na
-Hostinger, renovando onde você já renova. Vercel não é obrigatória — Railway, Render e
-Fly.io resolvem igual; ela é só a de menos atrito pra Next.js.
+## Caminho A — Vercel + subdomínio da Hostinger
 
 ### 1. Subir o app
 
-1. Em [vercel.com](https://vercel.com), **Add New → Project** e importe o
-   repositório `Tileonossauro/Funilmilionario`.
-2. Branch: `claude/gd-funnel-builder-agent-9jjw38` (ou mescle na `main` antes).
-3. Variáveis de ambiente:
+1. Entre em [vercel.com](https://vercel.com) com a conta do GitHub.
+2. **Add New → Project** e importe `Tileonossauro/Funilmilionario`.
+3. **Não mexa em Framework, Build Command nem Output Directory.** A Vercel
+   reconhece Next.js sozinha, e o branch certo já é o padrão do repositório —
+   não há nada para selecionar.
+4. Abra **Environment Variables** e preencha:
 
    | Variável | Valor |
    |---|---|
    | `NEXT_PUBLIC_SUPABASE_URL` | `https://fcspyecxcukhwgzcyqog.supabase.co` |
-   | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | anon key do painel do Supabase |
-   | `ANTHROPIC_API_KEY` | sua chave (opcional — sem ela só a leitura de print desliga) |
+   | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | anon key do painel do Supabase (Settings → API) |
+   | `ANTHROPIC_API_KEY` | sua chave — opcional, só a leitura de print depende dela |
    | `ANTHROPIC_MODEL` | `claude-sonnet-5` |
 
-4. Deploy. Sai uma URL tipo `algo.vercel.app`.
+5. **Deploy.** Sai uma URL tipo `funilmilionario-algo.vercel.app`.
 
-**Pare aqui e teste nessa URL.** Ela funciona igualzinho ao domínio final. Só aponte o
-subdomínio depois que o checklist do fim deste arquivo passar — assim, se algo quebrar,
-você sabe que é o app e não o DNS.
+> **Região.** O `vercel.json` do repositório fixa as funções em `gru1`
+> (São Paulo), do lado do banco. Sem isso elas rodariam nos EUA por padrão e
+> cada consulta atravessaria o continente — abrir um funil faz várias consultas,
+> então a lentidão apareceria. Se a sua conta reclamar da região, troque em
+> **Settings → Functions → Region** para a mais próxima disponível.
 
-### 2. Apontar o subdomínio
+### 2. Configurar o Supabase (antes de testar)
 
-Na Vercel, em **Settings → Domains**, adicione `funilmilionario.voltaregestao.com.br`.
+Sem este passo o cadastro não completa. Painel:
+https://supabase.com/dashboard/project/fcspyecxcukhwgzcyqog
+
+Em **Authentication → URL Configuration**:
+
+- **Site URL**: a URL da Vercel que acabou de sair
+- **Redirect URLs**: `https://<sua-url>.vercel.app/auth/callback`
+
+Em **Authentication → Providers → Email**, decida sobre a confirmação de e-mail:
+
+- **Desligada** — entra na hora. É o que eu faria para este primeiro teste.
+- **Ligada** — o app já trata (mostra "Confirme seu e-mail" e o link cai em
+  `/auth/callback`), mas o envio padrão do Supabase é limitado a poucos e-mails
+  por hora. Para uso real, configure SMTP próprio.
+
+### 3. Testar na URL da Vercel
+
+Passe o checklist do fim deste arquivo **antes** de encostar no domínio. Se
+alguma coisa quebrar, você sabe que é o app — não DNS.
+
+### 4. Só então apontar o subdomínio
+
+Na Vercel, **Settings → Domains**, adicione
+`funilmilionario.voltaregestao.com.br`.
 
 No hPanel da Hostinger, em **Domínios → `voltaregestao.com.br` → Zona DNS**, crie:
 
@@ -76,13 +96,16 @@ No hPanel da Hostinger, em **Domínios → `voltaregestao.com.br` → Zona DNS**
 |---|---|---|---|
 | `CNAME` | `funilmilionario` | `cname.vercel-dns.com` | padrão |
 
-No campo "Nome" vai só `funilmilionario`, não o endereço inteiro — a Hostinger completa
-o resto sozinha.
+No campo "Nome" vai só `funilmilionario`, não o endereço inteiro — a Hostinger
+completa o resto. Por ser subdomínio é CNAME, não registro `A`: o domínio
+principal `voltaregestao.com.br` continua apontando para onde já aponta,
+intocado.
 
-Como é subdomínio, é CNAME e não registro A: o domínio principal
-`voltaregestao.com.br` continua apontando pra onde já aponta, intocado. Propaga em
-minutos, às vezes algumas horas. O certificado HTTPS a Vercel emite sozinha assim que o
-DNS resolve.
+Propaga em minutos, às vezes horas. O HTTPS a Vercel emite sozinha.
+
+**Depois que o domínio funcionar, volte no Supabase** e troque a Site URL e a
+Redirect URL para o endereço definitivo — senão o link de confirmação continua
+mandando para a URL provisória.
 
 ---
 
