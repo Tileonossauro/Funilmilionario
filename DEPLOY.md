@@ -57,11 +57,13 @@ Atalho: procure "Node.js" no hPanel. Se a opção não existir, é compartilhada
 
 5. **Deploy.** Sai uma URL tipo `funilmilionario-algo.vercel.app`.
 
-> **Região.** O `vercel.json` do repositório fixa as funções em `gru1`
-> (São Paulo), do lado do banco. Sem isso elas rodariam nos EUA por padrão e
-> cada consulta atravessaria o continente — abrir um funil faz várias consultas,
-> então a lentidão apareceria. Se a sua conta reclamar da região, troque em
-> **Settings → Functions → Region** para a mais próxima disponível.
+> **Região (opcional, depois que estiver no ar).** O banco Supabase está em
+> São Paulo. Por padrão as funções da Vercel rodam nos EUA, então cada consulta
+> atravessa o continente — abrir um funil faz várias consultas e a lentidão
+> aparece. Em **Settings → Functions → Region**, mude para `gru1` (São Paulo)
+> se o seu plano permitir. Não faça isso por arquivo de configuração: o
+> `regions` no `vercel.json` é recurso de plano pago e derruba o deploy no
+> plano grátis.
 
 ### 2. Configurar o Supabase (antes de testar)
 
