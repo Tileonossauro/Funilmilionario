@@ -195,6 +195,24 @@ export async function salvarSimulacao(
   return error ? { ok: false, erro: error.message } : { ok: true }
 }
 
+const areasSchema = z.array(
+  z.object({
+    id: z.string().min(1).max(64),
+    label: z.string().min(1).max(40),
+    cor: z.enum(['violeta', 'ambar', 'ceu', 'esmeralda', 'rosa', 'cinza']),
+    altura: z.number().min(0).max(20000),
+  }),
+).max(12)
+
+export async function salvarAreas(funnelId: string, areas: unknown): Promise<ActionResult> {
+  const { supabase } = await ctx()
+  const parsed = areasSchema.safeParse(areas)
+  if (!parsed.success) return { ok: false, erro: 'Áreas inválidas.' }
+
+  const { error } = await supabase.from('funnels').update({ areas: parsed.data }).eq('id', funnelId)
+  return error ? { ok: false, erro: error.message } : { ok: true }
+}
+
 export async function salvarViewport(
   funnelId: string,
   viewport: { x: number; y: number; zoom: number },

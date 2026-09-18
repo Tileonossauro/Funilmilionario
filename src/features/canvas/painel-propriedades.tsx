@@ -5,6 +5,7 @@ import { useCanvasStore } from '@/features/canvas/store'
 import { getNodeType } from '@/domain/funnel/taxonomy'
 import { METRIC_META, computeDerived, DERIVED_META, formatMetric, type MetricKey } from '@/domain/metrics/keys'
 import { volumesDaEtapa } from '@/domain/funnel/fluxo'
+import { areaDaEtapa } from '@/domain/funnel/areas'
 import { IconeEtapa } from '@/components/ui/icone-etapa'
 import { atualizarNode, excluirNode, historicoDaEtapa, criarTarefa } from '@/app/funis/actions'
 import { Button, Input, Field, Textarea, Label } from '@/components/ui/primitives'
@@ -25,6 +26,7 @@ interface Historico {
 export function PainelPropriedades({ funnelId }: { funnelId: string }) {
   const selecionado = useCanvasStore((s) => s.selecionado)
   const simulacao = useCanvasStore((s) => s.simulacao)
+  const areas = useCanvasStore((s) => s.areas)
   const node = useCanvasStore((s) => s.nodes.find((n) => n.id === s.selecionado))
   const patchNode = useCanvasStore((s) => s.patchNode)
   const removeNode = useCanvasStore((s) => s.removeNode)
@@ -58,6 +60,7 @@ export function PainelPropriedades({ funnelId }: { funnelId: string }) {
   }
 
   const def = getNodeType(node.type)
+  const areaArredondada = areaDaEtapa(areas, node.position.y)?.label
 
   /** Escreve no banco em background; a UI já mostra o valor novo. */
   function salvar(patch: Record<string, unknown>) {
@@ -92,6 +95,14 @@ export function PainelPropriedades({ funnelId }: { funnelId: string }) {
           <span className="text-[10px] font-medium uppercase tracking-wide text-[var(--text-muted)]">
             {def.label}
           </span>
+          {areaArredondada ? (
+            <span
+              title="Área do funil — definida pela altura da etapa no canvas"
+              className="ml-auto rounded-md bg-[var(--surface-2)] px-1.5 py-0.5 text-[10px] font-medium"
+            >
+              {areaArredondada}
+            </span>
+          ) : null}
         </div>
       </div>
 

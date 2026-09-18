@@ -64,11 +64,19 @@ begin
     if found then vazou := vazou || 'simulacao-em-funil-alheio '; end if;
   exception when others then null; end;
 
+  begin
+    update funnels set areas = '[{"id":"topo","label":"invasao","cor":"cinza","altura":300}]'::jsonb
+    where id = f_ana;
+    if found then vazou := vazou || 'areas-em-funil-alheio '; end if;
+  exception when others then null; end;
+
   -- caminho legitimo do proprio dono precisa continuar inteiro
   begin
     insert into funnel_nodes (funnel_id, owner_id, type, position, data)
       values (f_bruno, bruno, 'oferta','{"x":0,"y":0}','{"label":"minha oferta","preco":29.9}');
     update funnels set simulacao = '{"ativa":true,"volume":10000}'::jsonb where id = f_bruno;
+    update funnels set areas = '[{"id":"topo","label":"Topo","cor":"violeta","altura":420}]'::jsonb
+    where id = f_bruno;
     insert into metric_entries (node_id, funnel_id, owner_id, periodo_de, periodo_ate, valores, origem)
       select id, f_bruno, bruno, '2026-09-01','2026-09-15','{"cliques":10}','manual'
       from funnel_nodes where funnel_id = f_bruno limit 1;

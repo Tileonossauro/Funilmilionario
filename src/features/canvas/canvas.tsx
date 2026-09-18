@@ -26,6 +26,7 @@ import { EtapaEdge } from '@/features/canvas/etapa-edge'
 import { taxaDePassagem } from '@/domain/funnel/fluxo'
 import { getNodeType, isNodeType, type NodeType } from '@/domain/funnel/taxonomy'
 import { proximaPosicao } from '@/domain/funnel/layout'
+import { AreasCanvas } from '@/features/canvas/areas-canvas'
 import {
   atualizarNode,
   criarNode,
@@ -287,6 +288,7 @@ function CanvasInterno({ funnelId }: { funnelId: string }) {
           proOptions={{ hideAttribution: true }}
           onlyRenderVisibleElements={nodes.length > 150}
         >
+          <AreasCanvas aoMudar={() => setSaveState('salvo')} />
           <Background variant={BackgroundVariant.Dots} gap={18} size={1} color="var(--border)" />
           <Controls showInteractive={false} position="bottom-left" />
           <MiniMap

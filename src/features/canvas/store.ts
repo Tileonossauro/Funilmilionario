@@ -3,6 +3,7 @@
 import { create } from 'zustand'
 import type { NodeType } from '@/domain/funnel/taxonomy'
 import { simular, type ResultadoSimulacao } from '@/domain/funnel/simulacao'
+import { redimensionar, type AreaFunil } from '@/domain/funnel/areas'
 
 export interface CanvasNode {
   id: string
@@ -54,12 +55,14 @@ interface CanvasStore {
   saveState: SaveState
   aviso: string | null
   simulacao: EstadoSimulacao
+  areas: AreaFunil[]
 
   iniciar: (
     funnelId: string,
     nodes: CanvasNode[],
     edges: CanvasEdge[],
     simulacao?: Partial<EstadoSimulacao>,
+    areas?: AreaFunil[],
   ) => void
   selecionar: (id: string | null) => void
   setSaveState: (s: SaveState) => void
@@ -73,6 +76,12 @@ interface CanvasStore {
   addEdge: (edge: CanvasEdge) => void
   patchEdge: (id: string, label: string) => void
   removeEdge: (id: string) => void
+
+  setAreas: (areas: AreaFunil[]) => void
+  renomearArea: (id: string, label: string) => void
+  removerArea: (id: string) => void
+  adicionarArea: () => void
+  redimensionarArea: (id: string, altura: number) => void
 
   patchSimulacao: (patch: Partial<EstadoSimulacao>) => void
   setTaxaNode: (nodeId: string, taxa: number | null) => void
@@ -88,14 +97,16 @@ export const useCanvasStore = create<CanvasStore>((set) => ({
   aviso: null,
 
   simulacao: SIMULACAO_INICIAL,
+  areas: [],
 
-  iniciar: (funnelId, nodes, edges, simulacao) =>
+  iniciar: (funnelId, nodes, edges, simulacao, areas) =>
     set({
       funnelId,
       nodes,
       edges,
       selecionado: null,
       saveState: 'ocioso',
+      areas: areas ?? [],
       // A entrada começa na etapa sem ninguém apontando para ela — quase sempre
       // é o topo do funil, e poupa o usuário de escolher antes de ver qualquer coisa.
       simulacao: {
@@ -145,6 +156,29 @@ export const useCanvasStore = create<CanvasStore>((set) => ({
       simulacao: { ...s.simulacao, taxasEdge: semChave(s.simulacao.taxasEdge, id) },
     })),
 
+  setAreas: (areas) => set({ areas }),
+
+  renomearArea: (id, label) =>
+    set((s) => ({ areas: s.areas.map((a) => (a.id === id ? { ...a, label } : a)) })),
+
+  removerArea: (id) => set((s) => ({ areas: s.areas.filter((a) => a.id !== id) })),
+
+  adicionarArea: () =>
+    set((s) => ({
+      areas: [
+        ...s.areas,
+        {
+          id: `area-${Date.now()}`,
+          label: 'Nova área',
+          cor: CORES_DISPONIVEIS[s.areas.length % CORES_DISPONIVEIS.length]!,
+          altura: 320,
+        },
+      ],
+    })),
+
+  redimensionarArea: (id, altura) =>
+    set((s) => ({ areas: redimensionar(s.areas, id, altura) })),
+
   patchSimulacao: (patch) => set((s) => ({ simulacao: { ...s.simulacao, ...patch } })),
 
   setTaxaNode: (nodeId, taxa) =>
@@ -169,6 +203,8 @@ export const useCanvasStore = create<CanvasStore>((set) => ({
       },
     })),
 }))
+
+const CORES_DISPONIVEIS = ['ceu', 'rosa', 'violeta', 'ambar', 'esmeralda', 'cinza'] as const
 
 function semChave(mapa: Record<string, number>, chave: string): Record<string, number> {
   const { [chave]: _removido, ...resto } = mapa

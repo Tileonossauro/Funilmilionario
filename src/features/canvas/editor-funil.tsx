@@ -9,11 +9,12 @@ import {
   type CanvasNode,
   type EstadoSimulacao,
 } from '@/features/canvas/store'
+import { CORES_AREA, ALTURA_MINIMA, areasPadrao, type AreaFunil } from '@/domain/funnel/areas'
 import { Canvas } from '@/features/canvas/canvas'
 import { Biblioteca } from '@/features/canvas/biblioteca'
 import { PainelPropriedades } from '@/features/canvas/painel-propriedades'
 import { ThemeToggle } from '@/features/shell/theme-toggle'
-import { renomearFunil, salvarSimulacao } from '@/app/funis/actions'
+import { renomearFunil, salvarSimulacao, salvarAreas } from '@/app/funis/actions'
 import { Button, Spinner } from '@/components/ui/primitives'
 import { BarraSimulacao } from '@/features/canvas/barra-simulacao'
 
@@ -22,9 +23,10 @@ interface Props {
   nodes: CanvasNode[]
   edges: CanvasEdge[]
   simulacao: Record<string, unknown> | null
+  areas: unknown
 }
 
-export function EditorFunil({ funil, nodes, edges, simulacao: salva }: Props) {
+export function EditorFunil({ funil, nodes, edges, simulacao: salva, areas: areasSalvas }: Props) {
   const iniciar = useCanvasStore((s) => s.iniciar)
   const saveState = useCanvasStore((s) => s.saveState)
   const aviso = useCanvasStore((s) => s.aviso)
@@ -43,12 +45,13 @@ export function EditorFunil({ funil, nodes, edges, simulacao: salva }: Props) {
    * voltava para a posição antiga. Enquanto o funil está aberto, quem manda no
    * estado é o cliente; o servidor é a origem só na abertura.
    */
+  const areas = useCanvasStore((s) => s.areas)
   const funilCarregado = useRef<string | null>(null)
   useEffect(() => {
     if (funilCarregado.current === funil.id) return
     funilCarregado.current = funil.id
-    iniciar(funil.id, nodes, edges, lerSimulacaoSalva(salva))
-  }, [funil.id, nodes, edges, salva, iniciar])
+    iniciar(funil.id, nodes, edges, lerSimulacaoSalva(salva), lerAreasSalvas(areasSalvas))
+  }, [funil.id, nodes, edges, salva, areasSalvas, iniciar])
 
   // O cenário é salvo com atraso: quem digita "10000" no tráfego gera cinco
   // estados intermediários, e nenhum deles precisa ir ao banco.
@@ -61,6 +64,18 @@ export function EditorFunil({ funil, nodes, edges, simulacao: salva }: Props) {
     const t = setTimeout(() => void salvarSimulacao(funil.id, simulacao), 900)
     return () => clearTimeout(t)
   }, [funil.id, simulacao])
+
+  // Mesmo tratamento para as áreas: arrastar a borda de uma faixa gera dezenas
+  // de estados por segundo, e nenhum deles precisa ir ao banco.
+  const areasCarregadas = useRef(false)
+  useEffect(() => {
+    if (!areasCarregadas.current) {
+      areasCarregadas.current = true
+      return
+    }
+    const t = setTimeout(() => void salvarAreas(funil.id, areas), 900)
+    return () => clearTimeout(t)
+  }, [funil.id, areas])
 
   useEffect(() => {
     if (!aviso) return
@@ -88,6 +103,7 @@ export function EditorFunil({ funil, nodes, edges, simulacao: salva }: Props) {
         <IndicadorSalvamento estado={saveState} />
 
         <div className="ml-auto flex items-center gap-1">
+          <BotaoAreas />
           <Button
             size="sm"
             variant={simulacao.ativa ? 'primary' : 'outline'}
@@ -119,6 +135,50 @@ export function EditorFunil({ funil, nodes, edges, simulacao: salva }: Props) {
           {aviso}
         </div>
       ) : null}
+    </div>
+  )
+}
+
+/**
+ * Liga as áreas do funil. Na primeira vez cria Topo / Meio / Fundo prontas —
+ * pedir para o usuário montar as três do zero antes de ver para que servem
+ * seria cobrar entendimento antes de entregar valor.
+ */
+function BotaoAreas() {
+  const areas = useCanvasStore((s) => s.areas)
+  const setAreas = useCanvasStore((s) => s.setAreas)
+  const adicionarArea = useCanvasStore((s) => s.adicionarArea)
+  const avisar = useCanvasStore((s) => s.avisar)
+
+  if (areas.length === 0) {
+    return (
+      <Button
+        size="sm"
+        variant="outline"
+        title="Dividir o funil em Topo, Meio e Fundo"
+        onClick={() => {
+          setAreas(areasPadrao())
+          avisar('Áreas criadas. Arraste as etapas entre as faixas.')
+        }}
+      >
+        Áreas
+      </Button>
+    )
+  }
+
+  return (
+    <div className="flex items-center gap-1">
+      <Button size="sm" variant="outline" onClick={adicionarArea} title="Adicionar área">
+        + Área
+      </Button>
+      <Button
+        size="sm"
+        variant="ghost"
+        title="Esconder as áreas (as etapas ficam onde estão)"
+        onClick={() => setAreas([])}
+      >
+        Ocultar
+      </Button>
     </div>
   )
 }
@@ -172,4 +232,25 @@ function lerSimulacaoSalva(bruto: Record<string, unknown> | null): Partial<Estad
     taxasNode: taxas(bruto.taxasNode),
     taxasEdge: taxas(bruto.taxasEdge),
   }
+}
+
+
+/**
+ * Áreas vindas do banco são jsonb solto: cada campo é conferido antes de virar
+ * estado, para dado antigo ou torto não derrubar o editor.
+ */
+function lerAreasSalvas(bruto: unknown): AreaFunil[] {
+  if (!Array.isArray(bruto)) return []
+
+  return bruto.flatMap((item): AreaFunil[] => {
+    if (!item || typeof item !== 'object') return []
+    const a = item as Record<string, unknown>
+    if (typeof a.id !== 'string' || typeof a.label !== 'string') return []
+
+    const cor = CORES_AREA.includes(a.cor as never) ? (a.cor as AreaFunil['cor']) : 'cinza'
+    const altura =
+      typeof a.altura === 'number' && Number.isFinite(a.altura) ? a.altura : ALTURA_MINIMA
+
+    return [{ id: a.id, label: a.label, cor, altura }]
+  })
 }

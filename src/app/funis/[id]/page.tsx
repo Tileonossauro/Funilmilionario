@@ -57,6 +57,7 @@ export default async function FunilPage({ params }: { params: Promise<{ id: stri
       nodes={nodes}
       edges={edges}
       simulacao={funil.simulacao}
+      areas={funil.areas}
     />
   )
 }

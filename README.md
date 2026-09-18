@@ -21,6 +21,10 @@ com tarefas automáticas. Em vez de digitar os números, jogue o print — a IA 
   chegam em cada etapa, quanta receita sai no fim, CAC, ROAS e lucro. As taxas **começam nos
   seus números reais** — se a sua LP converte 18,4% de verdade, a projeção parte daí. Onde o
   sistema precisou adivinhar, ele marca com traço pontilhado e avisa.
+- **Áreas do funil (Topo / Meio / Fundo)**: faixas horizontais atrás do canvas. A etapa
+  pertence a uma área **pela própria posição** — subiu o Reels, virou Topo. Cada faixa
+  mostra quantas etapas tem, e dá para renomear, redimensionar e criar outras
+  (Retenção, Remarketing, o que fizer sentido).
 - **Etapa de Oferta**: separada da página de vendas. A página é onde a pessoa passa; a oferta
   é o que ela compra e por quanto. Order bump e upsell no mesmo funil, cada um com seu preço.
 - **Leitura de print**: arrasta o screenshot do Instagram Insights / Gerenciador de
@@ -114,6 +118,11 @@ Usar zero para dizer "não achei" faz o histórico mentir.
 leads; `whatsapp` entra por conversas e sai por ativações. É esse par que permite calcular
 a conversão da etapa e a taxa de passagem entre etapas sem heurística — o mesmo número
 significaria coisas diferentes em cada etapa se fosse genérico.
+
+**Área é faixa, não caixa.** Topo/meio/fundo é uma sequência vertical, e o funil já desce
+na tela. Sendo faixa, a pertinência sai da posição da etapa: não existe "arrastar para
+dentro do grupo", nem etapa órfã porque foi movida um pixel para fora da borda. Foi a
+escolha que eliminou uma classe inteira de bug em vez de tratá-la.
 
 **Projeção e realidade nunca aparecem juntas no mesmo card.** Ligou Simular, o card mostra o
 projetado; desligou, mostra o real. Número hipotético ao lado de número medido é como alguém
