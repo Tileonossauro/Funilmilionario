@@ -1,38 +1,94 @@
 # GD Funnel Builder
 
-Ferramenta visual para criar, organizar, apresentar e analisar funis de aquisição, vendas,
-ativação e retenção — com um agente Claude operando como camada de inteligência sobre o
-grafo do funil.
+Monte a jornada de aquisição visualmente, lance os números de cada etapa e acompanhe
+com tarefas automáticas. Em vez de digitar os números, jogue o print — a IA lê pra você.
 
-> **Estado atual: fase de design.** Conforme §37 do PRD, os documentos de arquitetura vêm
-> antes do código. Nenhuma implementação foi iniciada.
+---
 
-## Documentos
+## O que já funciona
 
-| Documento | Conteúdo |
-|---|---|
-| [ARCHITECTURE.md](./ARCHITECTURE.md) | Stack, camadas, arquitetura do canvas, arquitetura do agente/MCP, segurança, árvore de diretórios, **ambiguidades do PRD e defaults assumidos** |
-| [DATABASE.md](./DATABASE.md) | Modelo de dados, DDL, RLS, RPC de salvamento, índices, ordem das migrations |
-| [FUNNEL_SCHEMA.md](./FUNNEL_SCHEMA.md) | Taxonomia de nodes, tipos `FunnelNode`/`FunnelEdge`/`FunnelGroup`, lint determinístico, Funnel Math, contrato de entrada/saída da IA, template GD Frete |
-| [ROADMAP.md](./ROADMAP.md) | Cinco fases com critérios de aceite e Definition of Done |
+- **Canvas drag & drop** com 26 tipos de etapa (Instagram, Reels, Landing Page, WhatsApp,
+  App, Checkout...), conexões, minimap, zoom e dark mode.
+- **Números por etapa**: lançamento com período, histórico completo e métricas derivadas
+  (CTR, conversão, CPL, CAC, ticket) calculadas — nunca digitadas.
+- **Tarefas automáticas**: adicionou Landing Page, nasce "Conferir dados da LP" em D+3.
+  Meta Ads gera "Revisar investimento e CPL" em D+1. Cada tipo tem sua regra.
+- **Leitura de print**: arrasta o screenshot do Instagram Insights / Gerenciador de
+  Anúncios / Analytics no painel da etapa e os números chegam preenchidos, com selo de
+  confiança por campo, para você conferir antes de salvar.
 
-## O fluxo que o produto precisa fazer excepcionalmente bem
+## Rodando
+
+```bash
+npm install
+cp .env.example .env.local     # preencha as variáveis
+npm run dev
+```
+
+### Supabase
+
+1. Crie um projeto em [supabase.com](https://supabase.com).
+2. Rode as migrations de `supabase/migrations/` na ordem (SQL Editor ou `supabase db push`).
+3. Copie URL e anon key para `.env.local`.
+
+As migrations criam as 6 tabelas, o bucket privado de prints, RLS em tudo e o trigger que
+cria o perfil no cadastro.
+
+### Claude (opcional)
+
+`ANTHROPIC_API_KEY` no `.env.local` liga a leitura de print. **Sem ela o app funciona
+inteiro** — só o upload de screenshot fica indisponível, com mensagem clara na tela.
+
+A chave só é lida no servidor (`src/services/ai/`), nunca chega ao navegador.
+
+## Comandos
+
+```bash
+npm run dev         # desenvolvimento
+npm run build       # build de produção
+npm run typecheck   # tsc --noEmit
+npm run test        # vitest
+npm run verify      # typecheck + test
+```
+
+## Estrutura
 
 ```
-IDEIA → IA → FUNIL VISUAL → EDIÇÃO → ANÁLISE → MELHORIA → APRESENTAÇÃO
+src/
+├─ domain/          puro: sem React, sem Supabase, 100% testável
+│  ├─ funnel/       taxonomia das etapas, schema Zod
+│  ├─ metrics/      chaves e cálculo das derivadas
+│  ├─ tasks/        regras de tarefa automática
+│  └─ extraction/   contrato da leitura de print
+├─ features/        canvas, dashboard, tarefas, shell
+├─ services/ai/     provider Claude — server-only
+├─ lib/supabase/    clientes browser/server e tipos do banco
+└─ app/             rotas, server actions, /api/extract
+
+supabase/migrations/  schema, RLS, storage
+docs/visao-completa/  a visão maior (agente, MCP, templates) — referência futura
 ```
 
-Tudo que não serve a esse fluxo fica fora do MVP.
+Regra de camadas: `domain/` não importa React nem Supabase. É o que permite testar
+o cálculo de métricas e as regras de tarefa sem browser e sem banco.
 
-## Princípios
+## Decisões que valem saber
 
-1. O grafo é dado, não pixel — a IA lê JSON semântico, nunca screenshot.
-2. Determinístico antes de probabilístico — o que um algoritmo detecta, não vai para a IA.
-3. A IA propõe, o usuário aplica — nada muda o canvas sem clique humano.
-4. Segredo nunca cruza a fronteira do servidor.
-5. Camadas não vazam — `domain/` é puro, testável sem browser e sem banco.
+**Métricas são um log, não uma coluna.** Cada lançamento vira uma linha em
+`metric_entries` com período próprio. O card da etapa mostra o mais recente, mas o
+histórico fica — sem isso não dá para ver que a LP caiu de 18% para 11%.
 
-## Próximo passo
+**Derivadas nunca são digitadas.** CTR, CPL, CAC e ticket saem de cliques, investimento e
+vendas. Deixar alguém digitar um CTR que discorda dos cliques é fabricar inconsistência.
 
-Revisar as 12 ambiguidades listadas em [ARCHITECTURE.md §10](./ARCHITECTURE.md#10-ambiguidades-identificadas-no-prd-372)
-e aprovar (ou corrigir) os defaults assumidos. Depois disso, Fase 0 do roadmap.
+**A IA não salva sozinha.** O print é lido, os campos são preenchidos, e você confirma.
+Número lido errado que entra direto no histórico é pior que número nenhum — você decidiria
+em cima de dado falso sem saber. O que a IA economiza é a digitação, não a conferência.
+
+**Campo não encontrado vem vazio, não zero.** Zero é um valor real ("não tivemos vendas").
+Usar zero para dizer "não achei" faz o histórico mentir.
+
+## Próximos passos
+
+Ver `PLAN.md`. A visão completa (agente Claude conversacional, MCP, templates,
+compartilhamento, simulação) está em `docs/visao-completa/` — planejada, fora do escopo atual.
