@@ -190,7 +190,7 @@ export function PainelPropriedades({ funnelId }: { funnelId: string }) {
                 className="w-full"
                 onClick={() => {
                   removeNode(node.id)
-                  void excluirNode(node.id, funnelId)
+                  void excluirNode(node.id)
                 }}
               >
                 Excluir etapa

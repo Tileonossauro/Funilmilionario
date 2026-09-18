@@ -36,6 +36,17 @@ import {
   salvarViewport,
 } from '@/app/funis/actions'
 
+/** uuid v4 com fallback: crypto.randomUUID exige contexto seguro (https). */
+function novoId(): string {
+  if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) return crypto.randomUUID()
+  return '10000000-1000-4000-8000-100000000000'.replace(/[018]/g, (c) =>
+    (
+      Number(c) ^
+      (crypto.getRandomValues(new Uint8Array(1))[0]! & (15 >> (Number(c) / 4)))
+    ).toString(16),
+  )
+}
+
 const nodeTypes = { etapa: EtapaNode }
 const edgeTypes = { etapa: EtapaEdge }
 
@@ -154,7 +165,7 @@ function CanvasInterno({ funnelId }: { funnelId: string }) {
         }
         if (change.type === 'remove') {
           removeNode(change.id)
-          void excluirNode(change.id, funnelId)
+          void excluirNode(change.id)
         }
       }
     },
@@ -173,57 +184,79 @@ function CanvasInterno({ funnelId }: { funnelId: string }) {
     [removeEdge],
   )
 
+  /**
+   * Conexão aparece na hora e some se o servidor recusar. Esperar a ida e volta
+   * antes de desenhar a linha fazia a ligação parecer que não pegou.
+   */
   const onConnect = useCallback(
     async (connection: Connection) => {
       if (!connection.source || !connection.target) return
 
-      setSaveState('salvando')
-      const r = await criarEdge({
-        funnelId,
-        sourceId: connection.source,
-        targetId: connection.target,
-      })
-
-      if (!r.ok) {
-        setSaveState('erro')
-        avisar(r.erro)
-        return
-      }
-
-      addEdge({ id: r.id, source: connection.source, target: connection.target, label: '' })
-      setSaveState('salvo')
-    },
-    [addEdge, avisar, funnelId, setSaveState],
-  )
-
-  const adicionarEtapa = useCallback(
-    async (tipo: NodeType, position: { x: number; y: number }) => {
-      const label = getNodeType(tipo).label
+      const id = novoId()
+      addEdge({ id, source: connection.source, target: connection.target, label: '' })
       setSaveState('salvando')
 
       try {
-        const r = await criarNode({ funnelId, type: tipo, label, position })
+        const r = await criarEdge({
+          id,
+          funnelId,
+          sourceId: connection.source,
+          targetId: connection.target,
+        })
+
         if (!r.ok) {
+          removeEdge(id)
           setSaveState('erro')
           avisar(r.erro)
           return
         }
-
-        const novo: CanvasNode = { id: r.id, type: tipo, position, label, rev: 0 }
-        addNode(novo)
         setSaveState('salvo')
-        selecionar(novo.id)
+      } catch {
+        removeEdge(id)
+        setSaveState('erro')
+        avisar('Não consegui salvar a conexão.')
+      }
+    },
+    [addEdge, avisar, funnelId, removeEdge, setSaveState],
+  )
+
+  /**
+   * A etapa entra na tela ANTES de ir ao banco.
+   *
+   * O id é gerado aqui, então não existe troca de id depois: a etapa já nasce
+   * com a identidade definitiva e pode ser movida, conectada ou editada
+   * enquanto a gravação acontece. Se o servidor recusar, ela é removida e o
+   * erro aparece — melhor um desfazer raro do que meio segundo de tela parada
+   * a cada clique.
+   */
+  const adicionarEtapa = useCallback(
+    async (tipo: NodeType, position: { x: number; y: number }) => {
+      const label = getNodeType(tipo).label
+      const id = novoId()
+
+      addNode({ id, type: tipo, position, label, rev: 0 })
+      selecionar(id)
+      setSaveState('salvando')
+
+      try {
+        const r = await criarNode({ id, funnelId, type: tipo, label, position })
+        if (!r.ok) {
+          removeNode(id)
+          setSaveState('erro')
+          avisar(r.erro)
+          return
+        }
+        setSaveState('salvo')
 
         // A tarefa automática é invisível se ninguém avisar que ela nasceu.
         if (r.tarefaCriada) avisar(`Tarefa criada: ${r.tarefaCriada}`)
       } catch {
-        // Sem isto, falha de rede ou de sessão deixava a tela parada e muda —
-        // indistinguível de "o clique não funcionou".
+        removeNode(id)
         setSaveState('erro')
         avisar('Não consegui criar a etapa. Verifique a conexão e tente de novo.')
       }
     },
-    [addNode, avisar, funnelId, selecionar, setSaveState],
+    [addNode, avisar, funnelId, removeNode, selecionar, setSaveState],
   )
 
   /**

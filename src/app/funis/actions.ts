@@ -55,6 +55,12 @@ export async function excluirFunil(id: string): Promise<void> {
 // ── Grafo ────────────────────────────────────────────────────────────────────
 
 const criarNodeSchema = z.object({
+  /**
+   * O id é gerado no navegador para a etapa aparecer na tela antes da ida ao
+   * banco. Não é brecha: a RLS continua exigindo dono do funil, e id repetido
+   * esbarra na chave primária.
+   */
+  id: z.string().uuid(),
   funnelId: z.string().uuid(),
   type: z.string().refine(isNodeType, 'Tipo de etapa desconhecido.'),
   label: z.string().min(1).max(120),
@@ -72,27 +78,25 @@ export async function criarNode(input: z.input<typeof criarNodeSchema>) {
   if (!parsed.success) {
     return { ok: false as const, erro: parsed.error.issues[0]?.message ?? 'Dados inválidos.' }
   }
-  const { funnelId, type, label, position } = parsed.data
+  const { id, funnelId, type, label, position } = parsed.data
 
-  const { data, error } = await supabase
-    .from('funnel_nodes')
-    .insert({
-      funnel_id: funnelId,
-      owner_id: user.id,
-      type,
-      position,
-      data: { label, rev: 0 },
-    })
-    .select('id')
-    .single()
+  const { error } = await supabase.from('funnel_nodes').insert({
+    id,
+    funnel_id: funnelId,
+    owner_id: user.id,
+    type,
+    position,
+    data: { label, rev: 0 },
+  })
 
-  if (error || !data) return { ok: false as const, erro: error?.message ?? 'Falha ao criar etapa.' }
+  if (error) return { ok: false as const, erro: error.message }
 
-  const tarefa = isNodeType(type) ? taskForNewNode(data.id, type, label) : null
+  // node_count é mantido por trigger no banco — não custa ida extra daqui.
+  const tarefa = isNodeType(type) ? taskForNewNode(id, type, label) : null
   if (tarefa) {
     await supabase.from('tasks').insert({
       funnel_id: funnelId,
-      node_id: data.id,
+      node_id: id,
       owner_id: user.id,
       titulo: tarefa.titulo,
       vencimento: tarefa.vencimento,
@@ -100,8 +104,7 @@ export async function criarNode(input: z.input<typeof criarNodeSchema>) {
     })
   }
 
-  await bumpNodeCount(funnelId)
-  return { ok: true as const, id: data.id, tarefaCriada: tarefa?.titulo ?? null }
+  return { ok: true as const, id, tarefaCriada: tarefa?.titulo ?? null }
 }
 
 export async function atualizarNode(
@@ -117,15 +120,14 @@ export async function atualizarNode(
   return error ? { ok: false, erro: error.message } : { ok: true }
 }
 
-export async function excluirNode(id: string, funnelId: string): Promise<ActionResult> {
+export async function excluirNode(id: string): Promise<ActionResult> {
   const { supabase } = await ctx()
   const { error } = await supabase.from('funnel_nodes').delete().eq('id', id)
-  if (error) return { ok: false, erro: error.message }
-  await bumpNodeCount(funnelId)
-  return { ok: true }
+  return error ? { ok: false, erro: error.message } : { ok: true }
 }
 
 export async function criarEdge(input: {
+  id: string
   funnelId: string
   sourceId: string
   targetId: string
@@ -136,23 +138,20 @@ export async function criarEdge(input: {
     return { ok: false as const, erro: 'Uma etapa não conecta nela mesma.' }
   }
 
-  const { data, error } = await supabase
-    .from('funnel_edges')
-    .insert({
-      funnel_id: input.funnelId,
-      owner_id: user.id,
-      source_id: input.sourceId,
-      target_id: input.targetId,
-      data: { label: input.label ?? '', rev: 0 },
-    })
-    .select('id')
-    .single()
+  const { error } = await supabase.from('funnel_edges').insert({
+    id: input.id,
+    funnel_id: input.funnelId,
+    owner_id: user.id,
+    source_id: input.sourceId,
+    target_id: input.targetId,
+    data: { label: input.label ?? '', rev: 0 },
+  })
 
   // 23505 = índice único: a conexão já existe. Não é erro que valha assustar o usuário.
   if (error?.code === '23505') return { ok: false as const, erro: 'Essas etapas já estão ligadas.' }
-  if (error || !data) return { ok: false as const, erro: error?.message ?? 'Falha ao conectar.' }
+  if (error) return { ok: false as const, erro: error.message }
 
-  return { ok: true as const, id: data.id }
+  return { ok: true as const, id: input.id }
 }
 
 export async function atualizarEdge(id: string, label: string): Promise<ActionResult> {
@@ -221,15 +220,6 @@ export async function salvarViewport(
   await supabase.from('funnels').update({ viewport }).eq('id', funnelId)
 }
 
-async function bumpNodeCount(funnelId: string) {
-  const { supabase } = await ctx()
-  const { count } = await supabase
-    .from('funnel_nodes')
-    .select('id', { count: 'exact', head: true })
-    .eq('funnel_id', funnelId)
-
-  await supabase.from('funnels').update({ node_count: count ?? 0 }).eq('id', funnelId)
-}
 
 // ── Lançamentos ──────────────────────────────────────────────────────────────
 

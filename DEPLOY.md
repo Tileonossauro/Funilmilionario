@@ -81,13 +81,13 @@ Atalho: procure "Node.js" no hPanel. Se a opção não existir, é compartilhada
 > esse passo não é opcional. Um push novo no repositório também dispara deploy
 > e resolve igual.
 
-> **Região (opcional, depois que estiver no ar).** O banco Supabase está em
-> São Paulo. Por padrão as funções da Vercel rodam nos EUA, então cada consulta
-> atravessa o continente — abrir um funil faz várias consultas e a lentidão
-> aparece. Em **Settings → Functions → Region**, mude para `gru1` (São Paulo)
-> se o seu plano permitir. Não faça isso por arquivo de configuração: o
-> `regions` no `vercel.json` é recurso de plano pago e derruba o deploy no
-> plano grátis.
+> **Região — faça assim que puder.** O banco Supabase está em
+> São Paulo. Por padrão as funções da Vercel rodam nos EUA, então **cada
+> gravação atravessa o continente duas vezes** — e isso é sentido como lentidão
+> no canvas. Em **Settings → Functions → Region**, mude para `gru1` (São Paulo).
+> Não faça por arquivo: o `regions` no `vercel.json` é recurso de plano pago e
+> derruba o deploy no plano grátis; pelo painel a Vercel só oferece o que o seu
+> plano permite.
 
 ### 2. Configurar o Supabase (antes de testar)
 
