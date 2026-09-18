@@ -2,9 +2,10 @@
 
 import { memo } from 'react'
 import { Handle, Position, type NodeProps } from '@xyflow/react'
-import { getNodeType, FAMILY_META, type NodeType } from '@/domain/funnel/taxonomy'
-import { METRIC_META, computeDerived, DERIVED_META, formatMetric } from '@/domain/metrics/keys'
-import type { MetricKey } from '@/domain/metrics/keys'
+import { getNodeType, type NodeType } from '@/domain/funnel/taxonomy'
+import { volumesDaEtapa } from '@/domain/funnel/fluxo'
+import { METRIC_META, formatMetric, type MetricKey } from '@/domain/metrics/keys'
+import { IconeEtapa } from '@/components/ui/icone-etapa'
 import { cn } from '@/lib/cn'
 
 export interface EtapaNodeData extends Record<string, unknown> {
@@ -15,79 +16,91 @@ export interface EtapaNodeData extends Record<string, unknown> {
   rev: number
 }
 
-const HUE_CLASSES: Record<string, string> = {
-  violet: 'text-violet-600 dark:text-violet-400 bg-violet-500/10',
-  amber: 'text-amber-600 dark:text-amber-400 bg-amber-500/10',
-  sky: 'text-sky-600 dark:text-sky-400 bg-sky-500/10',
-  emerald: 'text-emerald-600 dark:text-emerald-400 bg-emerald-500/10',
-  rose: 'text-rose-600 dark:text-rose-400 bg-rose-500/10',
-  slate: 'text-slate-600 dark:text-slate-400 bg-slate-500/10',
+/**
+ * Cada família tem cor E silhueta próprias. A forma é o que deixa o funil
+ * legível de longe, com o zoom afastado, sem ninguém ler uma palavra:
+ * tráfego é pílula, página tem cara de janela, lógica é losango.
+ */
+const ESTILO_FAMILIA: Record<string, { cor: string; tile: string; forma: string }> = {
+  trafego: {
+    cor: 'text-violet-600 dark:text-violet-400',
+    tile: 'bg-violet-500/12 text-violet-600 dark:text-violet-400',
+    forma: 'rounded-full px-1.5',
+  },
+  conteudo: {
+    cor: 'text-amber-600 dark:text-amber-400',
+    tile: 'bg-amber-500/12 text-amber-600 dark:text-amber-400',
+    forma: 'rounded-2xl',
+  },
+  pagina: {
+    cor: 'text-sky-600 dark:text-sky-400',
+    tile: 'bg-sky-500/12 text-sky-600 dark:text-sky-400',
+    forma: 'rounded-lg',
+  },
+  contato: {
+    cor: 'text-emerald-600 dark:text-emerald-400',
+    tile: 'bg-emerald-500/12 text-emerald-600 dark:text-emerald-400',
+    forma: 'rounded-2xl rounded-bl-md',
+  },
+  produto: {
+    cor: 'text-rose-600 dark:text-rose-400',
+    tile: 'bg-rose-500/12 text-rose-600 dark:text-rose-400',
+    forma: 'rounded-xl',
+  },
+  outros: {
+    cor: 'text-slate-500 dark:text-slate-400',
+    tile: 'bg-slate-500/12 text-slate-500 dark:text-slate-400',
+    forma: 'rounded-lg border-dashed',
+  },
 }
 
 function EtapaNodeImpl({ data, selected }: NodeProps) {
   const d = data as EtapaNodeData
   const def = getNodeType(d.etapaTipo)
-  const hue = HUE_CLASSES[FAMILY_META[def.family].hue] ?? HUE_CLASSES.slate!
+  const estilo = ESTILO_FAMILIA[def.family] ?? ESTILO_FAMILIA.outros!
 
   const valores = (d.ultimoLancamento ?? {}) as Partial<Record<MetricKey, number>>
-  const chaves = Object.keys(valores) as MetricKey[]
-  const derivadas = computeDerived(valores)
-  const derivadaPrincipal = (Object.keys(derivadas) as (keyof typeof derivadas)[])[0]
+  const { entrada, saida, conversao } = volumesDaEtapa(d.etapaTipo, valores)
+  const temNumeros = Object.keys(valores).length > 0
 
   return (
     <div
       className={cn(
-        'w-[190px] rounded-xl border bg-[var(--surface)] shadow-sm transition-all duration-100',
+        'w-[188px] border bg-[var(--surface)] transition-all duration-100',
+        estilo.forma,
         selected
-          ? 'border-[var(--accent)] ring-2 ring-[var(--accent)]/25'
-          : 'hover:border-[var(--text-muted)]',
+          ? 'border-[var(--accent)] shadow-[0_0_0_3px_var(--accent-soft)]'
+          : 'shadow-sm hover:border-[var(--text-muted)]',
       )}
     >
       <Handle type="target" position={Position.Top} />
 
-      <div className="flex items-start gap-2 p-3">
+      <div className="flex items-center gap-2.5 px-3 py-2.5">
         <span
           className={cn(
-            'flex size-6 shrink-0 items-center justify-center rounded-md text-xs',
-            hue,
+            'flex size-7 shrink-0 items-center justify-center rounded-lg',
+            estilo.tile,
           )}
         >
-          {def.icon}
+          <IconeEtapa nome={def.icon} className="size-4" />
         </span>
         <div className="min-w-0 flex-1">
-          <p className="truncate text-[13px] font-medium leading-tight">{d.label}</p>
-          <p className="mt-0.5 truncate text-[10px] text-[var(--text-muted)]">{def.label}</p>
+          <p className="truncate text-[13px] font-medium leading-snug">{d.label}</p>
+          <p className={cn('truncate text-[10px] leading-tight', estilo.cor)}>{def.label}</p>
         </div>
       </div>
 
-      {chaves.length > 0 ? (
+      {temNumeros ? (
         <div className="border-t px-3 py-2">
-          <div className="space-y-1">
-            {chaves.slice(0, 3).map((k) => {
-              const meta = METRIC_META[k]
-              const valor = valores[k]
-              if (!meta || valor === undefined) return null
-              return (
-                <div key={k} className="flex items-baseline justify-between gap-2">
-                  <span className="text-[10px] text-[var(--text-muted)]">{meta.label}</span>
-                  <span className="text-[11px] font-medium tabular-nums">
-                    {formatMetric(valor, meta.format)}
-                  </span>
-                </div>
-              )
-            })}
+          <div className="flex items-center justify-between gap-2">
+            <Volume valor={entrada} chave={def.volumeIn} />
+            {conversao !== undefined ? (
+              <span className="shrink-0 rounded-md bg-[var(--surface-2)] px-1.5 py-0.5 text-[10px] font-semibold tabular-nums">
+                {formatMetric(conversao, 'percentual')}
+              </span>
+            ) : null}
+            <Volume valor={saida} chave={def.volumeOut} alinharDireita />
           </div>
-
-          {derivadaPrincipal && derivadas[derivadaPrincipal] !== undefined ? (
-            <div className="mt-1.5 flex items-baseline justify-between gap-2 border-t pt-1.5">
-              <span className="text-[10px] font-medium text-[var(--accent)]">
-                {DERIVED_META[derivadaPrincipal].label}
-              </span>
-              <span className="text-[11px] font-semibold tabular-nums text-[var(--accent)]">
-                {formatMetric(derivadas[derivadaPrincipal]!, DERIVED_META[derivadaPrincipal].format)}
-              </span>
-            </div>
-          ) : null}
         </div>
       ) : def.metrics.length > 0 ? (
         <div className="border-t px-3 py-1.5">
@@ -97,6 +110,32 @@ function EtapaNodeImpl({ data, selected }: NodeProps) {
 
       <Handle type="source" position={Position.Bottom} />
     </div>
+  )
+}
+
+function Volume({
+  valor,
+  chave,
+  alinharDireita,
+}: {
+  valor: number | undefined
+  chave: MetricKey | undefined
+  alinharDireita?: boolean
+}) {
+  if (valor === undefined || !chave) {
+    return <span className="text-[10px] text-[var(--text-muted)]">—</span>
+  }
+  const meta = METRIC_META[chave]
+
+  return (
+    <span className={cn('min-w-0 flex-1', alinharDireita && 'text-right')}>
+      <span className="block truncate text-[11px] font-medium tabular-nums leading-tight">
+        {formatMetric(valor, meta.format)}
+      </span>
+      <span className="block truncate text-[9px] leading-tight text-[var(--text-muted)]">
+        {meta.label}
+      </span>
+    </span>
   )
 }
 

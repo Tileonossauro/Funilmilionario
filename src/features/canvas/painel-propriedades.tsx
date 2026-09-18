@@ -4,6 +4,8 @@ import { useEffect, useState, useTransition } from 'react'
 import { useCanvasStore } from '@/features/canvas/store'
 import { getNodeType } from '@/domain/funnel/taxonomy'
 import { METRIC_META, computeDerived, DERIVED_META, formatMetric, type MetricKey } from '@/domain/metrics/keys'
+import { volumesDaEtapa } from '@/domain/funnel/fluxo'
+import { IconeEtapa } from '@/components/ui/icone-etapa'
 import { atualizarNode, excluirNode, historicoDaEtapa, criarTarefa } from '@/app/funis/actions'
 import { Button, Input, Field, Textarea, Label } from '@/components/ui/primitives'
 import { LancamentoForm } from '@/features/canvas/lancamento-form'
@@ -77,12 +79,13 @@ export function PainelPropriedades({ funnelId }: { funnelId: string }) {
 
   const valores = (node.ultimoLancamento ?? {}) as Partial<Record<MetricKey, number>>
   const derivadas = computeDerived(valores)
+  const { conversao } = volumesDaEtapa(node.type, valores)
 
   return (
     <aside className="flex w-72 shrink-0 flex-col border-l bg-[var(--surface)]">
       <div className="border-b px-4 py-3">
         <div className="flex items-center gap-2">
-          <span className="text-sm">{def.icon}</span>
+          <IconeEtapa nome={def.icon} className="size-4 text-[var(--text-muted)]" />
           <span className="text-[10px] font-medium uppercase tracking-wide text-[var(--text-muted)]">
             {def.label}
           </span>
@@ -180,6 +183,13 @@ export function PainelPropriedades({ funnelId }: { funnelId: string }) {
                           <Linha key={k} nome={meta.label} valor={formatMetric(v, meta.format)} />
                         )
                       })}
+                      {conversao !== undefined ? (
+                        <Linha
+                          nome="Conversão da etapa"
+                          valor={formatMetric(conversao, 'percentual')}
+                          destaque
+                        />
+                      ) : null}
                       {(Object.keys(derivadas) as (keyof typeof derivadas)[]).map((k) => (
                         <Linha
                           key={k}

@@ -8,7 +8,11 @@ com tarefas automáticas. Em vez de digitar os números, jogue o print — a IA 
 ## O que já funciona
 
 - **Canvas drag & drop** com 26 tipos de etapa (Instagram, Reels, Landing Page, WhatsApp,
-  App, Checkout...), conexões, minimap, zoom e dark mode.
+  App, Checkout...), conexões, minimap, zoom e dark mode. Cada família tem cor e silhueta
+  próprias — o funil se lê de longe, pela forma, sem ler uma palavra.
+- **Taxa de passagem nas conexões**: a LP gerou 228 leads mas só 180 viraram conversa no
+  WhatsApp? A linha entre as duas mostra 79%, em vermelho. É a queda que não aparece
+  olhando nenhuma das duas etapas isoladamente.
 - **Números por etapa**: lançamento com período, histórico completo e métricas derivadas
   (CTR, conversão, CPL, CAC, ticket) calculadas — nunca digitadas.
 - **Tarefas automáticas**: adicionou Landing Page, nasce "Conferir dados da LP" em D+3.
@@ -27,12 +31,24 @@ npm run dev
 
 ### Supabase
 
-1. Crie um projeto em [supabase.com](https://supabase.com).
-2. Rode as migrations de `supabase/migrations/` na ordem (SQL Editor ou `supabase db push`).
-3. Copie URL e anon key para `.env.local`.
+O projeto **`gd-funnel-builder`** (ref `fcspyecxcukhwgzcyqog`, região sa-east-1) já está
+criado com todas as migrations aplicadas. Basta copiar a anon key do painel para
+`.env.local`:
 
-As migrations criam as 6 tabelas, o bucket privado de prints, RLS em tudo e o trigger que
-cria o perfil no cadastro.
+https://supabase.com/dashboard/project/fcspyecxcukhwgzcyqog/settings/api
+
+Para subir do zero em outro lugar, rode `supabase/migrations/` na ordem — criam as 6
+tabelas, o bucket privado de prints, RLS em tudo e o trigger de perfil no cadastro.
+
+**Antes do primeiro login**, confira em Authentication → Providers → Email se a
+confirmação de e-mail está do jeito que você quer. Ligada, o cadastro só entra depois de
+clicar no link do e-mail.
+
+#### Testar a RLS
+
+`supabase/tests/rls.sql` roda no SQL Editor. Ele simula dois usuários e tenta invadir o
+funil do outro de quatro formas. Passa em silêncio; falha nomeando o vazamento. **Rode a
+cada policy nova** — foi ele que pegou a falha corrigida em `0004`.
 
 ### Claude (opcional)
 
@@ -87,6 +103,16 @@ em cima de dado falso sem saber. O que a IA economiza é a digitação, não a c
 
 **Campo não encontrado vem vazio, não zero.** Zero é um valor real ("não tivemos vendas").
 Usar zero para dizer "não achei" faz o histórico mentir.
+
+**Cada etapa sabe sua entrada e sua saída.** `landing_page` entra por visitantes e sai por
+leads; `whatsapp` entra por conversas e sai por ativações. É esse par que permite calcular
+a conversão da etapa e a taxa de passagem entre etapas sem heurística — o mesmo número
+significaria coisas diferentes em cada etapa se fosse genérico.
+
+**RLS checa o dono do funil, não só o dono da linha.** Policy que valida apenas
+`owner_id = auth.uid()` na própria linha deixa qualquer um inserir etapas no funil alheio,
+bastando declarar a linha como sua. As tabelas filhas exigem posse do funil, e as conexões
+exigem que as duas pontas morem nele.
 
 ## Próximos passos
 

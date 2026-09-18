@@ -47,6 +47,19 @@ para pedir. São coisas diferentes e as duas estão certas.
 
 ---
 
+## Referência visual
+
+Funnelytics, sem copiar. O que vale de lá é conceitual e são três coisas:
+
+1. **Forma antes de texto** — cada família de etapa tem silhueta própria (tráfego é pílula,
+   página tem cara de janela, lógica é losango), então o funil se lê com o zoom afastado.
+2. **Número na conexão, não só no bloco** — a linha entre duas etapas carrega a taxa de
+   passagem. É ali que o vazamento aparece.
+3. **Ícone forte, texto curto** — o bloco identifica a etapa em um relance.
+
+O resto do produto é nosso: o modelo de dados, as regras de tarefa e a leitura de print
+não têm equivalente lá.
+
 ## Stack (a mesma, sem a parte cara)
 
 Next.js 15 (App Router) · TypeScript strict · Tailwind · @xyflow/react ·

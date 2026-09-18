@@ -21,6 +21,9 @@ export const METRIC_KEYS = [
 export type MetricKey = (typeof METRIC_KEYS)[number]
 
 export const DERIVED_KEYS = ['ctr', 'conversao', 'cpl', 'cac', 'ticket'] as const
+
+/** Exportado para o cálculo de fluxo, que precisa da mesma guarda contra zero. */
+export { ratio as razaoSegura }
 export type DerivedKey = (typeof DERIVED_KEYS)[number]
 
 type Format = 'inteiro' | 'moeda' | 'percentual'
@@ -49,7 +52,7 @@ export type MetricValues = Partial<Record<MetricKey, number>>
 export type DerivedValues = Partial<Record<DerivedKey, number>>
 
 /** Divisão que devolve undefined em vez de Infinity/NaN. */
-function ratio(a: number | undefined, b: number | undefined): number | undefined {
+export function ratio(a: number | undefined, b: number | undefined): number | undefined {
   if (a === undefined || b === undefined || b === 0) return undefined
   return a / b
 }
@@ -59,13 +62,6 @@ export function computeDerived(v: MetricValues): DerivedValues {
 
   const ctr = ratio(v.cliques, v.impressoes)
   if (ctr !== undefined) out.ctr = ctr
-
-  // Conversão usa o funil mais específico disponível na etapa.
-  const conversao =
-    ratio(v.leads, v.visitantes) ??
-    ratio(v.ativacoes, v.conversas) ??
-    ratio(v.vendas, v.leads)
-  if (conversao !== undefined) out.conversao = conversao
 
   const cpl = ratio(v.investimento, v.leads)
   if (cpl !== undefined) out.cpl = cpl

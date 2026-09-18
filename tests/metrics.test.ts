@@ -6,14 +6,6 @@ describe('computeDerived', () => {
     expect(computeDerived({ impressoes: 1000, cliques: 20 }).ctr).toBeCloseTo(0.02)
   })
 
-  it('calcula conversão de visitantes para leads', () => {
-    expect(computeDerived({ visitantes: 1240, leads: 228 }).conversao).toBeCloseTo(0.1839, 3)
-  })
-
-  it('usa conversas quando não há visitantes', () => {
-    expect(computeDerived({ conversas: 228, ativacoes: 96 }).conversao).toBeCloseTo(0.4211, 3)
-  })
-
   it('calcula CPL, CAC e ticket', () => {
     const d = computeDerived({ investimento: 1000, leads: 50, vendas: 10, receita: 299 })
     expect(d.cpl).toBe(20)

@@ -9,6 +9,7 @@ import {
   type NodeType,
 } from '@/domain/funnel/taxonomy'
 import { Input } from '@/components/ui/primitives'
+import { IconeEtapa } from '@/components/ui/icone-etapa'
 import { cn } from '@/lib/cn'
 
 const HUE: Record<string, string> = {
@@ -84,7 +85,7 @@ function ItemBiblioteca({ tipo }: { tipo: NodeType }) {
         'transition-colors hover:bg-[var(--surface-2)] active:cursor-grabbing',
       )}
     >
-      <span className={cn('w-4 text-center text-[13px]', cor)}>{def.icon}</span>
+      <IconeEtapa nome={def.icon} className={cn('size-4 shrink-0', cor)} />
       <span className="flex-1 truncate">{def.label}</span>
       {def.taskRule ? (
         <span

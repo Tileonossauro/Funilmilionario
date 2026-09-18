@@ -17,6 +17,8 @@ import {
 } from '@xyflow/react'
 import { useCanvasStore, type CanvasNode, type CanvasEdge } from '@/features/canvas/store'
 import { EtapaNode } from '@/features/canvas/etapa-node'
+import { EtapaEdge } from '@/features/canvas/etapa-edge'
+import { taxaDePassagem } from '@/domain/funnel/fluxo'
 import { getNodeType, isNodeType, type NodeType } from '@/domain/funnel/taxonomy'
 import {
   atualizarNode,
@@ -28,6 +30,7 @@ import {
 } from '@/app/funis/actions'
 
 const nodeTypes = { etapa: EtapaNode }
+const edgeTypes = { etapa: EtapaEdge }
 
 export function Canvas({ funnelId }: { funnelId: string }) {
   return (
@@ -74,18 +77,33 @@ function CanvasInterno({ funnelId }: { funnelId: string }) {
     [nodes, selecionado],
   )
 
-  const rfEdges = useMemo<Edge[]>(
-    () =>
-      edges.map((e) => ({
+  // A taxa de passagem depende dos números das DUAS pontas, então é calculada
+  // aqui, onde as etapas estão todas à mão, e não dentro de cada aresta.
+  const rfEdges = useMemo<Edge[]>(() => {
+    const porId = new Map(nodes.map((n) => [n.id, n]))
+
+    return edges.map((e) => {
+      const origem = porId.get(e.source)
+      const destino = porId.get(e.target)
+
+      const taxa =
+        origem && destino
+          ? taxaDePassagem(
+              { type: origem.type, valores: origem.ultimoLancamento ?? {} },
+              { type: destino.type, valores: destino.ultimoLancamento ?? {} },
+            )
+          : undefined
+
+      return {
         id: e.id,
         source: e.source,
         target: e.target,
-        label: e.label || undefined,
-        type: 'smoothstep',
+        type: 'etapa',
+        data: { label: e.label || undefined, taxa },
         markerEnd: { type: 'arrowclosed' as const },
-      })),
-    [edges],
-  )
+      }
+    })
+  }, [edges, nodes])
 
   /** Só o fim do arraste vai ao banco — durante o drag seria uma escrita por frame. */
   const onNodesChange = useCallback(
@@ -189,6 +207,7 @@ function CanvasInterno({ funnelId }: { funnelId: string }) {
           nodes={rfNodes}
           edges={rfEdges}
           nodeTypes={nodeTypes}
+          edgeTypes={edgeTypes}
           onNodesChange={onNodesChange}
           onEdgesChange={onEdgesChange}
           onConnect={onConnect}
