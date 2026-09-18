@@ -25,6 +25,7 @@ import { EtapaNode } from '@/features/canvas/etapa-node'
 import { EtapaEdge } from '@/features/canvas/etapa-edge'
 import { taxaDePassagem } from '@/domain/funnel/fluxo'
 import { getNodeType, isNodeType, type NodeType } from '@/domain/funnel/taxonomy'
+import { proximaPosicao } from '@/domain/funnel/layout'
 import {
   atualizarNode,
   criarNode,
@@ -199,35 +200,55 @@ function CanvasInterno({ funnelId }: { funnelId: string }) {
       const label = getNodeType(tipo).label
       setSaveState('salvando')
 
-      const r = await criarNode({ funnelId, type: tipo, label, position })
-      if (!r.ok) {
+      try {
+        const r = await criarNode({ funnelId, type: tipo, label, position })
+        if (!r.ok) {
+          setSaveState('erro')
+          avisar(r.erro)
+          return
+        }
+
+        const novo: CanvasNode = { id: r.id, type: tipo, position, label, rev: 0 }
+        addNode(novo)
+        setSaveState('salvo')
+        selecionar(novo.id)
+
+        // A tarefa automática é invisível se ninguém avisar que ela nasceu.
+        if (r.tarefaCriada) avisar(`Tarefa criada: ${r.tarefaCriada}`)
+      } catch {
+        // Sem isto, falha de rede ou de sessão deixava a tela parada e muda —
+        // indistinguível de "o clique não funcionou".
         setSaveState('erro')
-        avisar(r.erro)
-        return
+        avisar('Não consegui criar a etapa. Verifique a conexão e tente de novo.')
       }
-
-      const novo: CanvasNode = { id: r.id, type: tipo, position, label, rev: 0 }
-      addNode(novo)
-      setSaveState('salvo')
-
-      // A tarefa automática é invisível se ninguém avisar que ela nasceu.
-      if (r.tarefaCriada) avisar(`Tarefa criada: ${r.tarefaCriada}`)
     },
-    [addNode, avisar, funnelId, setSaveState],
+    [addNode, avisar, funnelId, selecionar, setSaveState],
   )
 
-  // Clique duplo na biblioteca adiciona no centro da tela.
+  /**
+   * Clique na biblioteca. Com uma etapa selecionada, a nova entra logo abaixo
+   * dela — é assim que se monta um funil, de cima para baixo. Sem seleção, vai
+   * para o centro da área visível, com um degrau a cada etapa para nunca
+   * empilhar duas exatamente no mesmo ponto.
+   */
   useEffect(() => {
     function handler(event: Event) {
       const tipo = (event as CustomEvent<string>).detail
       if (!isNodeType(tipo)) return
+
+      const { nodes: atuais, selecionado: atual } = useCanvasStore.getState()
       const box = wrapper.current?.getBoundingClientRect()
       if (!box) return
-      void adicionarEtapa(
-        tipo,
-        screenToFlowPosition({ x: box.x + box.width / 2, y: box.y + box.height / 2 }),
-      )
+
+      const referencia = screenToFlowPosition({
+        x: box.x + box.width / 2,
+        y: box.y + box.height / 3,
+      })
+      const base = atuais.find((n) => n.id === atual)
+
+      void adicionarEtapa(tipo, proximaPosicao(atuais.length, referencia, base?.position))
     }
+
     window.addEventListener('gd:add-etapa', handler)
     return () => window.removeEventListener('gd:add-etapa', handler)
   }, [adicionarEtapa, screenToFlowPosition])

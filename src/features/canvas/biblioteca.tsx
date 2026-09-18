@@ -59,7 +59,7 @@ export function Biblioteca() {
       </div>
 
       <p className="border-t px-3 py-2.5 text-[10px] leading-relaxed text-[var(--text-muted)]">
-        Arraste para o canvas ou clique duas vezes para adicionar no centro.
+        Clique para adicionar. Com uma etapa selecionada, a nova entra logo abaixo.
       </p>
     </aside>
   )
@@ -69,20 +69,30 @@ function ItemBiblioteca({ tipo }: { tipo: NodeType }) {
   const def = getNodeType(tipo)
   const cor = HUE[FAMILY_META[def.family].hue] ?? HUE.slate!
 
+  /**
+   * Clique é a interação principal, não o arraste. Drag-and-drop do HTML5 não
+   * existe em toque: no celular, arrastar da barra lateral não dispara evento
+   * nenhum e a tela fica parada sem nem uma mensagem de erro. O arraste
+   * continua funcionando no desktop, como atalho.
+   */
+  function adicionar() {
+    window.dispatchEvent(new CustomEvent('gd:add-etapa', { detail: tipo }))
+  }
+
   return (
-    <div
+    <button
+      type="button"
       draggable
+      onClick={adicionar}
       onDragStart={(e) => {
         e.dataTransfer.setData('application/gd-etapa', tipo)
         e.dataTransfer.effectAllowed = 'move'
       }}
-      onDoubleClick={() => {
-        window.dispatchEvent(new CustomEvent('gd:add-etapa', { detail: tipo }))
-      }}
       title={def.taskRule ? `Cria tarefa: ${def.taskRule.titulo} (D+${def.taskRule.prazoDias})` : undefined}
       className={cn(
-        'flex cursor-grab items-center gap-2 rounded-lg px-2 py-1.5 text-xs',
-        'transition-colors hover:bg-[var(--surface-2)] active:cursor-grabbing',
+        'flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-xs',
+        'transition-colors hover:bg-[var(--surface-2)] active:bg-[var(--accent-soft)]',
+        'outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]',
       )}
     >
       <IconeEtapa nome={def.icon} className={cn('size-4 shrink-0', cor)} />
@@ -95,6 +105,6 @@ function ItemBiblioteca({ tipo }: { tipo: NodeType }) {
           D+{def.taskRule.prazoDias}
         </span>
       ) : null}
-    </div>
+    </button>
   )
 }

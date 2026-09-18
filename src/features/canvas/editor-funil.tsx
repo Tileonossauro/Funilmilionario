@@ -33,7 +33,20 @@ export function EditorFunil({ funil, nodes, edges, simulacao: salva }: Props) {
   const patchSimulacao = useCanvasStore((s) => s.patchSimulacao)
   const [nome, setNome] = useState(funil.nome)
 
+  /**
+   * Carrega o funil do servidor UMA vez por funil aberto.
+   *
+   * `nodes` e `edges` são props do servidor, e toda Server Action do Next
+   * recarrega a rota por baixo — o que gera arrays novos a cada salvamento. Com
+   * esses arrays na lista de dependências, o efeito rodava de novo e substituía
+   * o store inteiro no meio da edição: etapa recém-criada sumia, node arrastado
+   * voltava para a posição antiga. Enquanto o funil está aberto, quem manda no
+   * estado é o cliente; o servidor é a origem só na abertura.
+   */
+  const funilCarregado = useRef<string | null>(null)
   useEffect(() => {
+    if (funilCarregado.current === funil.id) return
+    funilCarregado.current = funil.id
     iniciar(funil.id, nodes, edges, lerSimulacaoSalva(salva))
   }, [funil.id, nodes, edges, salva, iniciar])
 
