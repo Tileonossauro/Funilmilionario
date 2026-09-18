@@ -1,27 +1,50 @@
 # DEPLOY.md — colocar no ar
 
-## Antes de escolher onde hospedar: o que este app precisa
+## Primeiro: domínio e hospedagem são coisas diferentes
 
-Não é um site estático. Ele precisa de **Node.js rodando no servidor**, porque usa:
+**Domínio** é o endereço: `funilmilionario.voltaregestao.com.br`. Já existe, está na
+Hostinger, e vai continuar lá.
 
-- Server Components e Server Actions (todo o salvamento passa por aí);
-- middleware de autenticação (renova a sessão a cada request);
-- a rota `/api/extract`, que é onde a chave da Anthropic vive — ela **tem** que
-  ficar no servidor.
+**Hospedagem** é o computador que fica ligado rodando o app. O endereço aponta pra ele.
 
-Hospedagem compartilhada tradicional (a de PHP/WordPress, com cPanel ou hPanel)
-**não roda isso**. Não é preferência: sem processo Node, o app simplesmente não sobe.
+Ter o endereço não coloca nada no ar — precisa existir algo rodando pra onde ele aponta.
+Então a pergunta nunca é "Hostinger ou outro lugar": **o domínio fica na Hostinger nos
+dois casos**. A pergunta é só onde o app roda.
 
-Então a pergunta não é "Hostinger ou não", é **onde roda o Node**. O domínio pode
-continuar na Hostinger de qualquer jeito — é só apontar o DNS.
+## O que este app exige de quem hospeda
+
+Não é um site de arquivos parados. Precisa de **Node.js rodando no servidor**, porque:
+
+- salvar o funil passa por código que roda no servidor (Server Actions);
+- o login é verificado a cada acesso (middleware);
+- a rota `/api/extract` é onde a chave da Anthropic fica — ela **tem** que ficar no
+  servidor, nunca no navegador.
+
+Hospedagem compartilhada tradicional (a de WordPress/PHP, com cPanel ou hPanel) é feita
+pra outro tipo de site e **não roda isso**. Não é preferência: sem processo Node, o app
+não sobe.
+
+### Como descobrir qual é o seu caso
+
+No hPanel da Hostinger, olhe o menu:
+
+| O que você vê | Roda o app? | O que fazer |
+|---|---|---|
+| **VPS** | Sim | Caminho B, tudo na Hostinger |
+| **Hospedagem de Sites** (Premium / Business / Cloud) | Não | Caminho A |
+
+Atalho: procure "Node.js" no hPanel. Se a opção não existir, é compartilhada.
 
 ---
 
-## Caminho A — plataforma gerenciada + domínio na Hostinger (recomendado)
+## Caminho A — o app roda fora, o domínio continua na Hostinger
 
-O app roda na Vercel (de graça no plano Hobby, feita pelo time do Next.js), e o seu
-domínio da Hostinger aponta pra lá. Você continua dono do domínio, comprando e
-renovando onde já compra.
+Use este se a sua hospedagem for compartilhada.
+
+O app roda na Vercel (grátis no plano Hobby, feita pelo time do Next.js) e o subdomínio
+`funilmilionario.voltaregestao.com.br` aponta pra lá. O domínio continua seu, na
+Hostinger, renovando onde você já renova. Vercel não é obrigatória — Railway, Render e
+Fly.io resolvem igual; ela é só a de menos atrito pra Next.js.
 
 ### 1. Subir o app
 
@@ -37,27 +60,39 @@ renovando onde já compra.
    | `ANTHROPIC_API_KEY` | sua chave (opcional — sem ela só a leitura de print desliga) |
    | `ANTHROPIC_MODEL` | `claude-sonnet-5` |
 
-4. Deploy. Sai uma URL tipo `algo.vercel.app` — **já dá pra testar por aqui**,
-   antes de mexer em domínio nenhum.
+4. Deploy. Sai uma URL tipo `algo.vercel.app`.
 
-### 2. Apontar o domínio da Hostinger
+**Pare aqui e teste nessa URL.** Ela funciona igualzinho ao domínio final. Só aponte o
+subdomínio depois que o checklist do fim deste arquivo passar — assim, se algo quebrar,
+você sabe que é o app e não o DNS.
 
-Na Vercel, em **Settings → Domains**, adicione seu domínio. Ela mostra os
-registros. No hPanel da Hostinger, em **Domínios → DNS / Nameservers**:
+### 2. Apontar o subdomínio
 
-| Tipo | Nome | Valor |
-|---|---|---|
-| `A` | `@` | o IP que a Vercel mostrar |
-| `CNAME` | `www` | `cname.vercel-dns.com` |
+Na Vercel, em **Settings → Domains**, adicione `funilmilionario.voltaregestao.com.br`.
 
-Propaga em minutos (às vezes algumas horas). O HTTPS a Vercel emite sozinha.
+No hPanel da Hostinger, em **Domínios → `voltaregestao.com.br` → Zona DNS**, crie:
+
+| Tipo | Nome | Aponta para | TTL |
+|---|---|---|---|
+| `CNAME` | `funilmilionario` | `cname.vercel-dns.com` | padrão |
+
+No campo "Nome" vai só `funilmilionario`, não o endereço inteiro — a Hostinger completa
+o resto sozinha.
+
+Como é subdomínio, é CNAME e não registro A: o domínio principal
+`voltaregestao.com.br` continua apontando pra onde já aponta, intocado. Propaga em
+minutos, às vezes algumas horas. O certificado HTTPS a Vercel emite sozinha assim que o
+DNS resolve.
 
 ---
 
-## Caminho B — VPS da Hostinger
+## Caminho B — VPS da Hostinger (tudo num lugar só)
 
-Funciona, e o `Dockerfile` do repositório está pronto. Você passa a cuidar de
-atualização de sistema, renovação de certificado e reinício em caso de queda.
+Use este se você tem VPS. Aí não entra serviço nenhum de fora: app e domínio na
+Hostinger. Em troca, atualização de sistema, renovação de certificado e reinício em caso
+de queda passam a ser seus.
+
+O `Dockerfile` do repositório já está pronto.
 
 ```bash
 # no VPS
@@ -71,8 +106,10 @@ docker run -d --restart unless-stopped -p 3000:3000 \
   --name gd-funnel gd-funnel
 ```
 
-Falta ainda um nginx na frente fazendo proxy para a porta 3000 e o certificado
-via certbot. Se for por aqui, eu escrevo essa parte.
+Falta um nginx na frente fazendo proxy para a porta 3000 e o certificado via certbot,
+mais o apontamento do subdomínio como registro `A` para o IP do VPS. **Se for por aqui,
+me avise que eu escrevo essa parte** — não deixei pronto porque depende do IP e do
+sistema do seu VPS.
 
 > As `NEXT_PUBLIC_*` são embutidas no bundle do navegador **em tempo de build**.
 > Passar só no `docker run` não funciona — por isso elas são `--build-arg`.
@@ -87,9 +124,11 @@ Painel: https://supabase.com/dashboard/project/fcspyecxcukhwgzcyqog
 
 ### Authentication → URL Configuration
 
-- **Site URL**: a URL de produção (ex.: `https://seudominio.com.br`)
+- **Site URL**: `https://funilmilionario.voltaregestao.com.br`
+  (enquanto estiver testando na URL da Vercel, use a URL da Vercel aqui)
 - **Redirect URLs**: adicione
-  - `https://seudominio.com.br/auth/callback`
+  - `https://funilmilionario.voltaregestao.com.br/auth/callback`
+  - a URL de teste, se houver: `https://algo.vercel.app/auth/callback`
   - `http://localhost:3000/auth/callback` (para desenvolvimento)
 
 Sem isso, o link de confirmação do e-mail leva pro lugar errado e a conta fica
