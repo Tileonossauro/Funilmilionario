@@ -18,6 +18,8 @@ import { t, tn, LANGS, INSTR_LANGS, EXERCISE_NAME_LANGS, baseLang, dateLocale } 
 import { effectiveLang } from '../lib/default-lang.js'
 import { DEMO, REPO } from '../lib/demo.js'
 import { LOCAL_ONLY } from '../lib/local-only.js'
+import { CLOUD, useCloud } from '../lib/cloud.js'
+import { CloudRows, cloudSummary } from '../components/CloudSync.jsx'
 import { MOBILE, isAndroid, shareExport, shareExportBlob, syncReminder } from '../lib/mobile.js'
 import { NUDGE_COPY, NUDGE_TONES, toneOf } from '../lib/nudge.js'
 import { referencedFiles } from '../lib/media-refs.js'
@@ -819,7 +821,7 @@ export default function Settings({ page = null, find = null, via = null }) {
             onClick={connectServer} />
           <KeptChangesRows />
         </> : LOCAL_ONLY ? <>
-          <Row icon="lock" iconTint="var(--acc)" title={t('All data stays on this phone')} subtitle={t('No account, no cloud. Back it up anytime in Data & backup.')} />
+          {CLOUD ? <CloudRows /> : <Row icon="lock" iconTint="var(--acc)" title={t('All data stays on this phone')} subtitle={t('No account, no cloud. Back it up anytime in Data & backup.')} />}
         </> : DEMO ? <>
           <Row icon="info" iconTint="var(--acc)" title={t('You’re in the demo')} subtitle={t('Example data, stored only in this browser. Go wild and change anything you like.')} />
           <Row icon="reset" iconTint="var(--blue)" title={t('Reset demo data')} accessory="chevron"
@@ -888,9 +890,10 @@ function SettingsRoot({ ctx, preview, open, user, sync, home, go }) {
   const [key] = useState(() => window.history.state?.key || null)
   const [q, setQ] = useState(() => (key && lastQuery.key === key ? lastQuery.q : ''))
   const set = v => { lastQuery = { q: v, key }; setQ(v) }
+  const cloud = useCloud()
   const hits = q.trim() ? searchSettings(q, ctx) : null
   // The account card: who this is, and the one line that matters about it.
-  const acct = LOCAL_ONLY ? { title: t('Your data'), sub: t('No account, no cloud. Back it up anytime in Data & backup.') }
+  const acct = LOCAL_ONLY ? (CLOUD ? cloudSummary(cloud) : { title: t('Your data'), sub: t('No account, no cloud. Back it up anytime in Data & backup.') })
     : DEMO ? { title: t('Demo'), sub: t('Example data, only in this browser.') }
     : user ? {
       title: user.name || t('Account'),

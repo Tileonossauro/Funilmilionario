@@ -11,7 +11,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:fatigue-probe": "node scripts/fatigue-monotonic-probe.mjs",
-    "build:local": "VITE_LOCAL_ONLY=1 VITE_IMG_BASE=https://cdn.jsdelivr.net/gh/hasaneyldrm/exercises-dataset@7455efae41b330c265e7cd4b78dfa848e7ce5ebd/images/ VITE_GIF_BASE=https://cdn.jsdelivr.net/gh/hasaneyldrm/exercises-dataset@7455efae41b330c265e7cd4b78dfa848e7ce5ebd/videos/ vite build"
+    "build:local": "VITE_SUPABASE_URL=https://qnzthveyzdbmzqurrqou.supabase.co VITE_SUPABASE_KEY=sb_publishable_UjDUSBGyWqxXeD-su2pi1w_vtudIRlQ VITE_LOCAL_ONLY=1 VITE_IMG_BASE=https://cdn.jsdelivr.net/gh/hasaneyldrm/exercises-dataset@7455efae41b330c265e7cd4b78dfa848e7ce5ebd/images/ VITE_GIF_BASE=https://cdn.jsdelivr.net/gh/hasaneyldrm/exercises-dataset@7455efae41b330c265e7cd4b78dfa848e7ce5ebd/videos/ vite build"
   },
   "license": "AGPL-3.0-or-later",
   "dependencies": {
@@ -22,6 +22,7 @@
     "@capacitor/filesystem": "^7.1.8",
     "@capacitor/local-notifications": "^7.0.7",
     "@capacitor/share": "^7.0.4",
+    "@supabase/supabase-js": "^2.117.3",
     "jsqr": "^1.4.0",
     "lean-qr": "^2.7.3",
     "react": "^19.2.7",

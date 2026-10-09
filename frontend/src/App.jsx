@@ -23,6 +23,7 @@ import TabBar from './components/TabBar.jsx'
 import ErrorBoundary from './components/ErrorBoundary.jsx'
 import Modals from './components/Modals.jsx'
 import Toast from './components/Toast.jsx'
+import { CloudWatcher } from './components/CloudSync.jsx'
 import SyncBanner from './components/SyncBanner.jsx'
 import RestTimer from './components/RestTimer.jsx'
 import TimerFlash from './components/TimerFlash.jsx'
@@ -234,6 +235,7 @@ function Shell() {
       <RestTimer />
       <Modals />
       <Toast />
+      <CloudWatcher />
       <TimerFlash />
     </>
   )
