@@ -27,7 +27,9 @@ Fotos e vídeos de exercícios personalizados continuam só no aparelho.
 
 O `vercel.json` na raiz já está configurado: importe o repositório na Vercel e faça o deploy,
 sem variáveis de ambiente. O build roda `npm run build:local` em `frontend/` e publica
-`frontend/dist`.
+`frontend/dist`. O `vercel.json` usa `builds` de propósito: sem ele, a Vercel transformaria cada
+arquivo da pasta `api/` (o servidor do openGym, que o GostoSAH não usa) numa função serverless,
+mais do que o plano grátis permite.
 
 Rodar localmente:
 
