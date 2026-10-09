@@ -1,9 +1,7 @@
-node_modules
-.next
+**/node_modules
+frontend/dist
+media
+data
+.env
 .git
-.env*
-!.env.example
-tests
-supabase
-docs
-*.md
+*.log
