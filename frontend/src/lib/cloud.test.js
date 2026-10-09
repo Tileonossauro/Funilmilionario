@@ -30,9 +30,13 @@ const fakeStore = S => create((set, get) => ({
 }))
 
 describe('mergedCopy', () => {
-  it('a device with nothing of its own takes the row as it is', async () => {
+  it('a device joining the account with nothing of its own takes the row as it is', async () => {
     const remote = { unit: 'lb', workouts: [workout('w1', 10)], _ts: 10 }
-    expect(await cloud.mergedCopy({ unit: 'kg', workouts: [] }, remote)).toBe(remote)
+    expect(await cloud.mergedCopy({ unit: 'kg', workouts: [] }, remote, false)).toBe(remote)
+  })
+  it('once joined, a device with no workouts yet still keeps what it changed', async () => {
+    const m = await cloud.mergedCopy({ workouts: [], tourDone: true, _ts: 20 }, { workouts: [], _ts: 10 }, true)
+    expect(m.tourDone).toBe(true)
   })
   it('with no row the local copy stands', async () => {
     const local = { workouts: [workout('w1', 10)] }

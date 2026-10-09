@@ -39,15 +39,21 @@ async function supabase() {
 const hasData = st => !!((st?.workouts || []).length || (st?.routines || []).length || (st?.bodyweight || []).length || (st?.customEx || []).length)
 const same = (a, b) => JSON.stringify(a) === JSON.stringify(b)
 
-// The local copy and the row → what both should hold. A device with nothing of its own yet (a
-// new phone, a cleared browser) takes the row as it is: its untouched defaults must not win over
-// settings chosen on the other device.
-export async function mergedCopy(local, remote) {
+// The local copy and the row → what both should hold. A device joining the account with nothing
+// of its own yet (a new phone, a cleared browser) takes the row as it is: its untouched defaults
+// must not win over settings chosen on the other device. Once it has synced with the account,
+// every later sync merges, so a setting changed here before any workout is logged is kept.
+export async function mergedCopy(local, remote, joined = true) {
   if (!remote) return local
-  if (!hasData(local)) return remote
+  if (!joined && !hasData(local)) return remote
   const { mergeStates } = await import('./sync-merge.js')
   return mergeStates(local, remote)
 }
+
+// Which account this browser's copy last synced with (one per device).
+const JOINED_KEY = 'gostosah_synced_uid'
+const joinedWith = uid => { try { return localStorage.getItem(JOINED_KEY) === uid } catch { return false } }
+const markJoined = uid => { try { localStorage.setItem(JOINED_KEY, uid) } catch { /* ignore */ } }
 
 async function syncOnce() {
   const sb = await supabase()
@@ -58,7 +64,7 @@ async function syncOnce() {
   const { data: row, error } = await sb.from(TABLE).select('state').eq('user_id', session.user.id).maybeSingle()
   if (error) throw error
   const local = store.getState().S
-  const merged = await mergedCopy(local, row?.state || null)
+  const merged = await mergedCopy(local, row?.state || null, joinedWith(session.user.id))
   if (!same(merged, local)) {
     applying = true
     try { store.getState().replaceState(merged, false) } finally { applying = false }
@@ -67,6 +73,7 @@ async function syncOnce() {
     const { error: e } = await sb.from(TABLE).upsert({ user_id: session.user.id, state: store.getState().S })
     if (e) throw e
   }
+  markJoined(session.user.id)
   useCloud.setState({ status: 'ok', lastSynced: Date.now(), error: null })
 }
 

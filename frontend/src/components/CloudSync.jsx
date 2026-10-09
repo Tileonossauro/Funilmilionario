@@ -1,6 +1,7 @@
 // GostoSAH cloud save: the Settings rows and the sign-in sheet (lib/cloud.js does the work).
 import { useEffect, useRef, useState } from 'react'
 import { useUI } from '../store/useUI.js'
+import { useStore } from '../store/useStore.js'
 import { dateLocale } from '../lib/i18n-core.js'
 import { useCloud, syncNow, signIn, signUp, signOut, resetPassword, updatePassword, cloudError } from '../lib/cloud.js'
 import { Row, Button } from './ui.jsx'
@@ -9,7 +10,9 @@ const ui = () => useUI.getState()
 const errStyle = { color: 'var(--red)', marginTop: 10 }
 const MIN = 6
 
-function AuthSheet({ close, initial = 'signin' }) {
+// The e-mail-and-password form: in a sheet from Settings, and as the welcome screen itself when
+// the account comes first (views/Welcome.jsx). `close` runs once the account is in.
+export function AuthForm({ close, initial = 'signin', autoFocus = true, title = true }) {
   const [mode, setMode] = useState(initial)   // 'signin' | 'signup' | 'reset'
   const [email, setEmail] = useState('')
   const [pw, setPw] = useState('')
@@ -17,7 +20,7 @@ function AuthSheet({ close, initial = 'signin' }) {
   const [err, setErr] = useState(null)
   const [sent, setSent] = useState(null)
   const ref = useRef(null)
-  useEffect(() => { setTimeout(() => ref.current?.focus(), 250) }, [])
+  useEffect(() => { if (autoFocus) setTimeout(() => ref.current?.focus(), 250) }, [])
   const submit = async ev => {
     ev.preventDefault()
     if (busy) return
@@ -36,14 +39,14 @@ function AuthSheet({ close, initial = 'signin' }) {
     } catch (e) { setErr(cloudError(e)) }
     finally { setBusy(false) }
   }
-  const title = mode === 'signup' ? 'Criar conta' : mode === 'reset' ? 'Esqueci a senha' : 'Entrar'
+  const heading = mode === 'signup' ? 'Criar conta' : mode === 'reset' ? 'Esqueci a senha' : 'Entrar'
   if (sent) return <>
-    <h3>{title}</h3>
+    {title && <h3>{heading}</h3>}
     <div className="muted" style={{ marginBottom: 16 }}>{sent}</div>
-    <Button variant="primary" onClick={close}>OK</Button>
+    <Button variant="primary" onClick={() => { setSent(null); setMode('signin') }}>OK</Button>
   </>
   return <>
-    <h3>{title}</h3>
+    {title && <h3>{heading}</h3>}
     <div className="muted small" style={{ marginBottom: 14 }}>
       {mode === 'reset' ? 'Mandamos um link para o seu e-mail para você criar uma senha nova.'
         : 'Com uma conta, seus treinos ficam salvos na nuvem: troque de celular ou limpe o navegador sem perder nada.'}
@@ -93,7 +96,7 @@ function NewPasswordSheet({ close }) {
   </>
 }
 
-export const openCloudSignIn = (mode = 'signin') => ui().openSheet(close => <AuthSheet close={close} initial={mode} />)
+export const openCloudSignIn = (mode = 'signin') => ui().openSheet(close => <AuthForm close={close} initial={mode} />)
 
 // Mounted once (App.jsx): asks for the new password when the app was opened from the reset e-mail.
 export function CloudWatcher() {
@@ -129,6 +132,8 @@ export function CloudRows() {
     <Row icon="cloud" iconTint={c.status === 'error' ? 'var(--red)' : 'var(--acc)'} title={c.email} subtitle={sub} />
     <Row icon="reset" iconTint="var(--blue)" title="Sincronizar agora" accessory="chevron"
       onClick={async () => { await syncNow(); const s = useCloud.getState(); ui().toast(s.status === 'ok' ? 'Tudo salvo na nuvem' : cloudSummary(s).sub) }} />
+    <Row icon="info" iconTint="var(--acc)" title="Ver o tutorial de novo" accessory="chevron"
+      onClick={() => useStore.getState().update(s => { s.tourDone = false })} />
     <Row icon="signOut" iconTint="var(--red)" title="Sair da conta" subtitle="Os dados continuam neste celular." danger
       onClick={async () => { await signOut(); ui().toast('Você saiu da conta') }} />
   </>

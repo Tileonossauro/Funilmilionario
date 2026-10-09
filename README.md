@@ -56,4 +56,8 @@ Mudanças em relação ao openGym:
 - Modo "só local" (`VITE_LOCAL_ONLY=1`, em `frontend/src/lib/local-only.js`): abre direto no app,
   sem tela de login, sem sincronização e sem opções de servidor.
 - Começa em português do Brasil.
-- Login por e-mail e senha com salvamento na nuvem (Supabase), no lugar do servidor próprio.
+- Login por e-mail e senha com salvamento na nuvem (Supabase), no lugar do servidor próprio. A conta
+  vem primeiro: o app só abre depois de criar a conta ou entrar.
+- Tutorial na primeira vez (`frontend/src/views/Welcome.jsx`), uma vez por conta; dá pra ver de novo
+  em Configurações → Conta.
+- Sem o cartão da academia (check-in com QR code).

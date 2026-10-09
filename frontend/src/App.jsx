@@ -17,6 +17,7 @@ import { installViewportGuard } from './lib/viewport-guard.js'
 import { installChipDrag } from './lib/hchips.js'
 import { syncPushSubscription } from './lib/push.js'
 import { MOBILE } from './lib/mobile.js'
+import { CHECKIN } from './lib/local-only.js'
 import { exitWorkoutEdit, startFlow } from './sheets.jsx'
 import Icon from './components/Icon.jsx'
 import TabBar from './components/TabBar.jsx'
@@ -24,6 +25,8 @@ import ErrorBoundary from './components/ErrorBoundary.jsx'
 import Modals from './components/Modals.jsx'
 import Toast from './components/Toast.jsx'
 import { CloudWatcher } from './components/CloudSync.jsx'
+import { CLOUD, useCloud } from './lib/cloud.js'
+import { CloudWelcome, Onboarding } from './views/Welcome.jsx'
 import SyncBanner from './components/SyncBanner.jsx'
 import RestTimer from './components/RestTimer.jsx'
 import TimerFlash from './components/TimerFlash.jsx'
@@ -180,10 +183,23 @@ function Shell() {
   }, [inWorkout])
   // The chat owns the bottom of the screen as well: its composer sits where the tabs would be.
   // The first-launch card has no tabs either: they changed the route behind it.
-  const noTabs = inWorkout || loc.pathname === '/coach' || needsMobileOnboarding
+  // GostoSAH (cloud build): the account comes first, then the tour once per account. The tour
+  // waits for the first sync after signing in, so a phone that joins an account that already took
+  // it never shows it.
+  const cloudReady = useCloud(s => s.ready)
+  const cloudEmail = useCloud(s => s.email)
+  const cloudStatus = useCloud(s => s.status)
+  const cloudSynced = useCloud(s => s.lastSynced)
+  const cloudGate = !CLOUD ? null
+    : !cloudReady ? 'wait'
+    : !cloudEmail ? 'account'
+    : S.tourDone ? null
+    : cloudStatus === 'syncing' && !cloudSynced ? 'wait'
+    : 'tour'
+  const noTabs = inWorkout || loc.pathname === '/coach' || needsMobileOnboarding || !!cloudGate
 
   const authed = user || isGuest
-  if (!ready && !authed) return (
+  if ((!ready && !authed) || cloudGate === 'wait') return (
     <div id="app">
       <div style={{ paddingTop: '44vh', display: 'flex', justifyContent: 'center', fontSize: 34, color: 'var(--label-3)' }}>
         <Icon name="dumbbell" />
@@ -197,12 +213,12 @@ function Shell() {
           re-mounts the boundary, so the tab bar is always a way out */}
       <div id="app" className="vfade" key={loc.pathname}>
         <ErrorBoundary>
-          {!authed ? <Login /> : needsMobileOnboarding ? <MobileOnboarding /> : (
+          {cloudGate === 'account' ? <CloudWelcome /> : cloudGate === 'tour' ? <Onboarding /> : !authed ? <Login /> : needsMobileOnboarding ? <MobileOnboarding /> : (
             <Routes>
               <Route path="/home" element={<Home />} />
               {/* Gym check-in — switched off in Settings, the route falls through to the
                   catch-all redirect below. */}
-              {S.checkIn !== false && <Route path="/checkin" element={<CheckIn />} />}
+              {CHECKIN && S.checkIn !== false && <Route path="/checkin" element={<CheckIn />} />}
               <Route path="/plan" element={<Plan />} />
               <Route path="/plan/r/:id" element={<RoutineEdit />} />
               <Route path="/workout" element={<Workout />} />
