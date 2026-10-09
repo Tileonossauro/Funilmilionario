@@ -1,15 +1,23 @@
-node_modules/
-.next/
-out/
-build/
-dist/
-coverage/
+# Exercise media — fetched on first `docker compose up` (or via scripts/fetch-media.sh)
+media/img/
+media/gif/
+
+# Runtime data — users, passkeys, per-user state, session secret
+data/
+
+# Local config
 .env
-.env.local
-.env*.local
-.DS_Store
+
+# Build output / deps
+frontend/dist/
+node_modules/
 *.log
-.vercel
-playwright-report/
-test-results/
-tsconfig.tsbuildinfo
+.DS_Store
+node_modules
+.claude/
+.agents/
+
+# CI reports (test:* jobs write these next to the suites)
+junit.xml
+coverage/
+frontend/bundle-size.json
